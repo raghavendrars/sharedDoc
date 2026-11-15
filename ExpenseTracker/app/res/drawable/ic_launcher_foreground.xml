@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo: a ledger page with entry lines and a gold coin with an up arrow. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M36,28h30a5,5 0 0 1 5,5v42a5,5 0 0 1 -5,5h-30a5,5 0 0 1 -5,-5v-42a5,5 0 0 1 5,-5z" />
+    <path android:fillColor="#00695C" android:pathData="M37,37h22v4h-22z" />
+    <path android:fillColor="#80CBC4" android:pathData="M37,46h28v3h-28z" />
+    <path android:fillColor="#80CBC4" android:pathData="M37,53h28v3h-28z" />
+    <path android:fillColor="#80CBC4" android:pathData="M37,60h14v3h-14z" />
+    <path android:fillColor="#FFB300"
+        android:pathData="M68,70m-14,0a14,14 0 1 1 28,0a14,14 0 1 1 -28,0" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M68,61l-7,8h4.5v8h5v-8h4.5z" />
+</vector>

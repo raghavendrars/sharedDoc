@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="@color/bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingLeft="28dp"
+        android:paddingRight="28dp"
+        android:paddingTop="56dp"
+        android:paddingBottom="28dp">
+
+        <ImageView
+            android:id="@+id/lockLogo"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:src="@mipmap/ic_launcher" />
+
+        <TextView
+            android:id="@+id/lockTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:textColor="@color/text"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/lockSub"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:textColor="@color/dim"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/bookLabel"
+            style="@style/Label"
+            android:layout_marginTop="24dp"
+            android:text="Name for this book (shown inside the app and on reports)" />
+
+        <EditText
+            android:id="@+id/bookName"
+            style="@style/Input"
+            android:hint="e.g. Home expenses"
+            android:inputType="textCapWords"
+            android:maxLength="30" />
+
+        <TextView
+            android:id="@+id/passLabel"
+            style="@style/Label"
+            android:text="Password" />
+
+        <EditText
+            android:id="@+id/password"
+            style="@style/Input"
+            android:inputType="textPassword"
+            android:maxLength="40" />
+
+        <TextView
+            android:id="@+id/confirmLabel"
+            style="@style/Label"
+            android:text="Repeat password" />
+
+        <EditText
+            android:id="@+id/confirm"
+            style="@style/Input"
+            android:inputType="textPassword"
+            android:maxLength="40" />
+
+        <CheckBox
+            android:id="@+id/useBio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:checked="true"
+            android:text="Also unlock with fingerprint"
+            android:textColor="@color/text"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/lockError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:textColor="@color/debit"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/lockAction"
+            style="@style/PrimaryButton"
+            android:layout_marginTop="10dp"
+            android:text="Unlock" />
+
+        <Button
+            android:id="@+id/bioButton"
+            style="@style/OutlineButton"
+            android:layout_marginTop="12dp"
+            android:text="Use fingerprint" />
+    </LinearLayout>
+</ScrollView>

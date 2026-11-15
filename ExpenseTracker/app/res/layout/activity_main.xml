@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/primary"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingRight="16dp">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_launcher_foreground" />
+
+        <TextView
+            android:id="@+id/headerTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <include android:id="@+id/pageEntry" layout="@layout/page_entry" />
+        <include android:id="@+id/pageList" layout="@layout/page_list" android:visibility="gone" />
+        <include android:id="@+id/pageReport" layout="@layout/page_report" android:visibility="gone" />
+        <include android:id="@+id/pageMore" layout="@layout/page_more" android:visibility="gone" />
+    </FrameLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/card"
+        android:orientation="horizontal">
+
+        <TextView android:id="@+id/tabEntry" style="@style/Tab" android:text="Add entry" />
+        <TextView android:id="@+id/tabList" style="@style/Tab" android:text="Entries" />
+        <TextView android:id="@+id/tabReport" style="@style/Tab" android:text="Report" />
+        <TextView android:id="@+id/tabMore" style="@style/Tab" android:text="More" />
+    </LinearLayout>
+</LinearLayout>
