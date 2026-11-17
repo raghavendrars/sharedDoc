@@ -1,0 +1,464 @@
+package com.kidslearn.app;
+
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.text.Html;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
+
+/** Quiz Time: ten pick-one-of-four questions. A star for every question answered right the first time. */
+final class QuizScreen {
+    static final int MATHS = 0, ENGLISH = 1, EVS = 2, GK = 3, ANIMALS = 4, PLANTS = 5, PHONICS = 6, KANNADA = 7, HINDI = 8;
+    static final String[] TITLES = {"Maths", "English", "EVS", "General Knowledge", "Animals", "Plants", "Phonics", "Kannada", "Hindi"};
+    static final String[] ICONS = {"➕", "🔤", "🌍", "💡", "🐾", "🌱", "🗣️", "ಅ", "अ"};
+    static final int[] COLORS = {0xFF00ACC1, 0xFF6A1B9A, 0xFF2E7D32, 0xFF1565C0, 0xFF6D4C41, 0xFF388E3C, 0xFF3949AB, 0xFFD81B60, 0xFFEF6C00};
+    /** Open Trivia DB category used when a parent allows online questions (0 = offline only). */
+    private static final int[] ONLINE = {0, 0, 17, 9, 27, 0, 0, 0, 0};
+    static final int QUIZ_COLOR = 0xFF5C6BC0;
+    private static final int ROUND = 10;
+    static final String[] PRAISE = {"Well done!", "Great job!", "Super!", "Yes! That is right!", "Awesome!"};
+
+    private static final class Opt {
+        String text;
+    }
+
+    private static final class Q {
+        String prompt, say, visual, lang = "en";
+        Opt[] o;
+        int ok;
+    }
+
+    private final MainActivity a;
+    private final int mode, color;
+    private final Random rnd;
+    private int n, won;
+    private boolean firstTry, locked, online;
+    private Q q;
+    private List<String[]> order;
+    private LinearLayout body;
+    private TextView prog;
+    private ProgressBar bar;
+
+    private QuizScreen(MainActivity a, int mode) {
+        this.a = a;
+        this.mode = mode;
+        this.color = COLORS[mode];
+        this.rnd = a.rnd;
+    }
+
+    static Runnable open(final MainActivity a, final int mode) {
+        return () -> a.show(new QuizScreen(a, mode).make(), false, COLORS[mode], MainActivity.QUIZ);
+    }
+
+    private View make() {
+        LinearLayout page = new LinearLayout(a);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setBackgroundColor(color);
+        page.addView(Ui.topBar(a, TITLES[mode] + " quiz"));
+
+        prog = Ui.text(a, "", 15, Color.WHITE, true);
+        page.addView(prog);
+        bar = progressBar(a);
+        bar.setMax(ROUND);
+        page.addView(bar, barParams(a));
+
+        body = new LinearLayout(a);
+        body.setOrientation(LinearLayout.VERTICAL);
+        int p = Ui.dp(a, 12);
+        body.setPadding(p, 0, p, p);
+        page.addView(body, Ui.lp(Ui.MATCH, 0, 1));
+
+        final int cat = ONLINE[mode];
+        if (cat > 0 && a.prefs.getBoolean("online", false)) {
+            body.addView(Ui.text(a, "🌐\nGetting questions from the internet…", 22, Color.WHITE, true), Ui.lp(Ui.MATCH, Ui.MATCH, 0));
+            new Thread(() -> {
+                final List<String[]> got = fetch(cat);
+                a.runOnUiThread(() -> {
+                    if (!body.isAttachedToWindow()) return;
+                    if (got != null && got.size() >= ROUND) {
+                        online = true;
+                        order = got;
+                    }
+                    ask();
+                });
+            }, "quiz-online").start();
+        } else ask();
+        return page;
+    }
+
+    static ProgressBar progressBar(MainActivity a) {
+        ProgressBar bar = new ProgressBar(a, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setProgressTintList(ColorStateList.valueOf(Color.WHITE));
+        bar.setProgressBackgroundTintList(ColorStateList.valueOf(Color.WHITE));
+        return bar;
+    }
+
+    static LinearLayout.LayoutParams barParams(MainActivity a) {
+        LinearLayout.LayoutParams blp = Ui.lp(Ui.MATCH, Ui.dp(a, 8), 0);
+        blp.setMargins(Ui.dp(a, 24), Ui.dp(a, 6), Ui.dp(a, 24), Ui.dp(a, 6));
+        return blp;
+    }
+
+    /** Ten easy questions from opentdb.com, or null when offline. */
+    private static List<String[]> fetch(int category) {
+        HttpURLConnection c = null;
+        try {
+            URL u = new URL("https://opentdb.com/api.php?amount=10&category=" + category + "&difficulty=easy&type=multiple");
+            c = (HttpURLConnection) u.openConnection();
+            c.setConnectTimeout(6000);
+            c.setReadTimeout(6000);
+            if (c.getResponseCode() != 200) return null;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (InputStream in = c.getInputStream()) {
+                byte[] buf = new byte[8192];
+                int r;
+                while ((r = in.read(buf)) > 0 && out.size() < 512 * 1024) out.write(buf, 0, r);
+            }
+            JSONObject o = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8));
+            if (o.optInt("response_code", 1) != 0) return null;
+            JSONArray res = o.getJSONArray("results");
+            List<String[]> list = new ArrayList<>();
+            for (int i = 0; i < res.length(); i++) {
+                JSONObject x = res.getJSONObject(i);
+                JSONArray wrong = x.getJSONArray("incorrect_answers");
+                if (wrong.length() < 3) continue;
+                list.add(new String[]{plain(x.getString("question")), plain(x.getString("correct_answer")),
+                        plain(wrong.getString(0)), plain(wrong.getString(1)), plain(wrong.getString(2))});
+            }
+            return list;
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private static String plain(String html) {
+        return Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY).toString().trim();
+    }
+
+    private void ask() {
+        if (n >= ROUND) {
+            result(a, TITLES[mode], won, ROUND, color, open(a, mode));
+            return;
+        }
+        switch (mode) {
+            case MATHS:
+                q = maths();
+                break;
+            case PHONICS:
+                q = phonics();
+                break;
+            case KANNADA:
+                q = indic("kn");
+                break;
+            case HINDI:
+                q = indic("hi");
+                break;
+            case ENGLISH:
+                q = bank(QBank.ENGLISH);
+                break;
+            case EVS:
+                q = bank(QBank.EVS);
+                break;
+            case GK:
+                q = bank(QBank.GK);
+                break;
+            case ANIMALS:
+                q = bank(QBank.ANIMALS);
+                break;
+            default:
+                q = bank(QBank.PLANTS);
+                break;
+        }
+        firstTry = true;
+        locked = false;
+        prog.setText((online ? "🌐 " : "") + "Question " + (n + 1) + " of " + ROUND);
+        bar.setProgress(n);
+        body.removeAllViews();
+
+        int len = q.prompt.length();
+        final TextView prompt = Ui.text(a, q.prompt, len > 40 ? 20 : len > 24 ? 24 : len > 14 ? 28 : 40, Color.WHITE, true);
+        prompt.setPadding(0, Ui.dp(a, 8), 0, Ui.dp(a, 4));
+        Ui.click(prompt, this::sayQuestion);
+        body.addView(prompt);
+        if (q.visual != null) body.addView(Ui.text(a, q.visual, q.visual.length() > 12 ? 26 : 56, Color.WHITE, true));
+
+        boolean wide = false;
+        for (Opt o : q.o) if (o.text.length() > 4) wide = true;
+        LinearLayout row = null;
+        for (int i = 0; i < 4; i++) {
+            if (wide || i % 2 == 0) {
+                row = new LinearLayout(a);
+                body.addView(row, Ui.lp(Ui.MATCH, 0, 1));
+            }
+            final Opt o = q.o[i];
+            final FrameLayout t = new FrameLayout(a);
+            t.setBackground(Ui.tile(a, Color.WHITE, 22));
+            int pad = Ui.dp(a, 8);
+            t.setPadding(pad, pad, pad, pad + Ui.dp(a, 6));
+            float size = wide ? (o.text.length() > 18 ? 18 : 24) : 50;
+            t.addView(Ui.text(a, o.text, size, Ui.INK, true), new FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH));
+            final int index = i;
+            t.setOnClickListener(v -> pick(t, index));
+            row.addView(t, Ui.lp(a, 0, Ui.MATCH, 1, wide ? 4 : 7));
+            Ui.popIn(t, 50L * i);
+        }
+        sayQuestion();
+    }
+
+    private void sayQuestion() {
+        if (q.say == null) return;
+        if (!a.speaker.say(q.say, q.lang)) prog.setText("No " + TITLES[mode] + " voice on this phone");
+    }
+
+    private void pick(FrameLayout t, int i) {
+        if (locked) return;
+        if (i == q.ok) {
+            locked = true;
+            t.setBackground(Ui.tile(a, 0xFF66BB6A, 22));
+            Ui.bounce(t);
+            a.speaker.good();
+            a.speaker.say(PRAISE[rnd.nextInt(PRAISE.length)]);
+            if (firstTry) {
+                won++;
+                a.addStars(1);
+            }
+            a.confetti();
+            n++;
+            a.later(1400, this::ask);
+        } else {
+            firstTry = false;
+            t.setBackground(Ui.tile(a, 0xFFEF9A9A, 22));
+            t.setOnClickListener(null);
+            t.setClickable(false);
+            Ui.shake(t);
+            a.speaker.bad();
+            a.speaker.say("Try again");
+        }
+    }
+
+    /** End-of-round screen; also saves the score for parents. */
+    static void result(final MainActivity a, String title, int won, int total, final int color, final Runnable again) {
+        a.stats.addScore(title, won, total);
+        LinearLayout page = new LinearLayout(a);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setGravity(Gravity.CENTER);
+        page.setBackgroundColor(color);
+        int p = Ui.dp(a, 28);
+        page.setPadding(p, p, p, p);
+        TextView party = Ui.text(a, "🎉", 84, Color.WHITE, false);
+        page.addView(party);
+        page.addView(Ui.text(a, won * 10 >= total * 8 ? "Brilliant!" : won * 2 >= total ? "Well done!" : "Good try!", 38, Color.WHITE, true));
+        page.addView(Ui.text(a, "You won " + won + " of " + total + " stars", 22, Color.WHITE, true));
+        TextView row = Ui.text(a, won == 0 ? " " : Data.repeat("⭐", won, 5), 30, Color.WHITE, false);
+        row.setPadding(0, Ui.dp(a, 12), 0, Ui.dp(a, 12));
+        page.addView(row);
+        TextView againBtn = Ui.button(a, "Play again", Color.WHITE, Ui.INK, () -> a.later(140, again));
+        LinearLayout.LayoutParams lp = Ui.lp(Ui.MATCH, Ui.WRAP, 0);
+        lp.topMargin = Ui.dp(a, 14);
+        page.addView(againBtn, lp);
+        TextView home = Ui.button(a, "Home", 0xFFFFD54F, Ui.INK, () -> a.later(140, a::home));
+        LinearLayout.LayoutParams lp2 = Ui.lp(Ui.MATCH, Ui.WRAP, 0);
+        lp2.topMargin = Ui.dp(a, 14);
+        page.addView(home, lp2);
+        a.show(page, false, color, MainActivity.QUIZ);
+        Ui.popIn(party, 100);
+        a.confetti();
+        a.speaker.say("You won " + won + (won == 1 ? " star" : " stars"));
+    }
+
+    // ---- question makers ----
+
+    private int[] four(int n) {
+        List<Integer> all = new ArrayList<>();
+        for (int i = 0; i < n; i++) all.add(i);
+        Collections.shuffle(all, rnd);
+        return new int[]{all.get(0), all.get(1), all.get(2), all.get(3)};
+    }
+
+    /** Four different rows whose given column also differs. */
+    private int[] fourDistinct(String[][] src, int col) {
+        while (true) {
+            int[] ix = four(src.length);
+            boolean clash = false;
+            for (int i = 0; i < 4; i++)
+                for (int j = i + 1; j < 4; j++)
+                    if (src[ix[i]][col].equalsIgnoreCase(src[ix[j]][col])) clash = true;
+            if (!clash) return ix;
+        }
+    }
+
+    private static Opt opt(String s) {
+        Opt o = new Opt();
+        o.text = s;
+        return o;
+    }
+
+    private void fill(Q q, List<String> vals, String right) {
+        Collections.shuffle(vals, rnd);
+        q.o = new Opt[4];
+        for (int i = 0; i < 4; i++) q.o[i] = opt(vals.get(i));
+        q.ok = vals.indexOf(right);
+    }
+
+    private Q bank(String[][] src) {
+        if (order == null) {
+            order = new ArrayList<>(Arrays.asList(src));
+            Collections.shuffle(order, rnd);
+        }
+        String[] r = order.get(n % order.size());
+        Q q = new Q();
+        q.prompt = r[0];
+        q.say = r[0];
+        fill(q, new ArrayList<>(Arrays.asList(r[1], r[2], r[3], r[4])), r[1]);
+        return q;
+    }
+
+    private Q maths() {
+        Q q = new Q();
+        int type = rnd.nextInt(7), ans;
+        if (type == 0) {
+            int x = 1 + rnd.nextInt(9), y = 1 + rnd.nextInt(10);
+            ans = x + y;
+            q.prompt = x + " + " + y + " = ?";
+            q.say = x + " plus " + y;
+        } else if (type == 1) {
+            int x = 5 + rnd.nextInt(45), y = 1 + rnd.nextInt(x - 1);
+            ans = x - y;
+            q.prompt = x + " − " + y + " = ?";
+            q.say = x + " minus " + y;
+        } else if (type == 2) {
+            int x = 2 + rnd.nextInt(9), y = 2 + rnd.nextInt(9);
+            ans = x * y;
+            q.prompt = x + " × " + y + " = ?";
+            q.say = x + " times " + y;
+        } else if (type == 3) {
+            int y = 2 + rnd.nextInt(8), z = 2 + rnd.nextInt(9);
+            ans = z;
+            q.prompt = (y * z) + " ÷ " + y + " = ?";
+            q.say = (y * z) + " divided by " + y;
+        } else if (type == 4) {
+            int x = 2 + rnd.nextInt(20), y = 2 + rnd.nextInt(20);
+            ans = y;
+            q.prompt = x + " + ? = " + (x + y);
+            q.say = x + " plus what makes " + (x + y) + "?";
+        } else if (type == 5) {
+            int h = 1 + rnd.nextInt(9), t = rnd.nextInt(10), o = rnd.nextInt(10);
+            int num = h * 100 + t * 10 + o;
+            q.prompt = "How many tens are in " + num + "?";
+            q.say = q.prompt;
+            ans = t;
+            List<String> vals = new ArrayList<>(Arrays.asList(String.valueOf(t)));
+            for (String s : new String[]{String.valueOf(h), String.valueOf(o), String.valueOf((t + 1) % 10), String.valueOf((t + 3) % 10)})
+                if (!vals.contains(s) && vals.size() < 4) vals.add(s);
+            while (vals.size() < 4) {
+                String s = String.valueOf(rnd.nextInt(10));
+                if (!vals.contains(s)) vals.add(s);
+            }
+            fill(q, vals, String.valueOf(t));
+            return q;
+        } else {
+            List<String> vals = new ArrayList<>();
+            while (vals.size() < 4) {
+                String s = String.valueOf(10 + rnd.nextInt(990));
+                if (!vals.contains(s)) vals.add(s);
+            }
+            boolean big = rnd.nextBoolean();
+            String right = vals.get(0);
+            for (String s : vals) if (big ? Integer.parseInt(s) > Integer.parseInt(right) : Integer.parseInt(s) < Integer.parseInt(right)) right = s;
+            q.prompt = big ? "Which number is the biggest?" : "Which number is the smallest?";
+            q.say = q.prompt;
+            fill(q, vals, right);
+            return q;
+        }
+        List<String> vals = new ArrayList<>();
+        vals.add(String.valueOf(ans));
+        while (vals.size() < 4) {
+            String s = String.valueOf(Math.max(0, ans + rnd.nextInt(11) - 5));
+            if (!vals.contains(s)) vals.add(s);
+        }
+        fill(q, vals, String.valueOf(ans));
+        return q;
+    }
+
+    /** The voice says a sound and a word; the child picks the letters that make the sound. */
+    private Q phonics() {
+        Q q = new Q();
+        boolean pairs = rnd.nextBoolean();
+        String[][] src = pairs ? Data.BLEND : Data.LETTER_SOUND;
+        int[] ix = fourDistinct(src, 1);
+        int ok = rnd.nextInt(4);
+        List<String> vals = new ArrayList<>();
+        for (int i : ix) vals.add(src[i][0]);
+        String[] r = src[ix[ok]];
+        q.prompt = "🔊 Which sound do you hear?";
+        q.visual = r[3];
+        q.say = r[1] + ". " + r[1] + ". As in " + r[2] + ".";
+        fill(q, vals, r[0]);
+        return q;
+    }
+
+    private Q indic(String lang) {
+        Q q = new Q();
+        q.lang = lang;
+        String[][] letters = lang.equals("kn") ? Data.join(Data.KN_V, Data.KN_C) : Data.join(Data.HI_V, Data.HI_C);
+        String[][] words = Data.words(lang).toArray(new String[0][]);
+        String[] nums = lang.equals("kn") ? Data.KN_NUM : Data.HI_NUM;
+        int type = rnd.nextInt(4);
+        List<String> vals = new ArrayList<>();
+        String right;
+        if (type == 0) {
+            int[] ix = fourDistinct(letters, 1);
+            String[] r = letters[ix[0]];
+            for (int i : ix) vals.add(letters[i][0]);
+            right = r[0];
+            q.prompt = "🔊 Find the letter “" + r[1] + "”";
+            q.say = r[0];
+        } else if (type == 1) {
+            int[] ix = fourDistinct(words, 4);
+            String[] r = words[ix[0]];
+            for (int i : ix) vals.add(words[i][4]);
+            right = r[4];
+            q.prompt = "What does " + r[2] + " mean?";
+            q.say = r[2];
+        } else if (type == 2) {
+            List<String[]> pics = new ArrayList<>();
+            for (String[] w : words) if (!w[5].isEmpty()) pics.add(w);
+            String[][] arr = pics.toArray(new String[0][]);
+            int[] ix = fourDistinct(arr, 2);
+            String[] r = arr[ix[0]];
+            for (int i : ix) vals.add(arr[i][2]);
+            right = r[2];
+            q.prompt = "Which word is this?";
+            q.visual = r[5];
+            q.say = null;
+        } else {
+            int[] ix = four(10);
+            for (int i : ix) vals.add(String.valueOf(i + 1));
+            right = String.valueOf(ix[0] + 1);
+            q.prompt = "🔊 Which number is " + nums[ix[0]] + "?";
+            q.say = nums[ix[0]];
+        }
+        fill(q, vals, right);
+        return q;
+    }
+}

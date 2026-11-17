@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- open book -->
+    <path android:fillColor="#FFFFFF" android:pathData="M30,66 L54,72 L54,80 L30,74 Z" />
+    <path android:fillColor="#EDE7F6" android:pathData="M78,66 L54,72 L54,80 L78,74 Z" />
+    <!-- smiling star -->
+    <path android:fillColor="#FFD54F" android:strokeColor="#FFB300" android:strokeWidth="1.5" android:strokeLineJoin="round"
+        android:pathData="M54,26 L59.9,41.6 L76.6,42.4 L63.6,52.8 L68,68.9 L54,59.7 L40,68.9 L44.4,52.8 L31.4,42.4 L48.1,41.6 Z" />
+    <path android:fillColor="#5D4037" android:pathData="M49.5,48 m-1.7,0 a1.7,1.7 0 1,0 3.4,0 a1.7,1.7 0 1,0 -3.4,0" />
+    <path android:fillColor="#5D4037" android:pathData="M58.5,48 m-1.7,0 a1.7,1.7 0 1,0 3.4,0 a1.7,1.7 0 1,0 -3.4,0" />
+    <path android:strokeColor="#5D4037" android:strokeWidth="1.5" android:strokeLineCap="round"
+        android:pathData="M50,53 Q54,57 58,53" />
+</vector>
