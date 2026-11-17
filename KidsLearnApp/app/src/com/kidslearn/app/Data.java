@@ -24,7 +24,7 @@ final class Item {
 /** Learning content. Pictures are emoji, so the app carries no image files. */
 final class Data {
     static final int LETTERS = 0, NUMBERS = 1, KN_VOWELS = 2, KN_CONS = 3, KN_WORDS = 4, KN_NUMS = 5,
-            HI_VOWELS = 6, HI_CONS = 7, HI_WORDS = 8, HI_NUMS = 9, PH_LETTERS = 10, PH_BLENDS = 11;
+            HI_VOWELS = 6, HI_CONS = 7, HI_WORDS = 8, HI_NUMS = 9, PH_LETTERS = 10, PH_BLENDS = 11, SIGHT = 12;
 
     static final int[] BRIGHT = {0xFFE53935, 0xFFFB8C00, 0xFFFDD835, 0xFF43A047, 0xFF1E88E5, 0xFF8E24AA, 0xFFEC407A, 0xFF00ACC1};
 
@@ -125,6 +125,9 @@ final class Data {
             {"sh", "shh", "ship", "🚢", ""}, {"ch", "chuh", "cheese", "🧀", ""}, {"th", "thuh", "thumb", "👍", ""},
             {"ph", "fuh", "phone", "📱", "ph sounds like f"}, {"wh", "wuh", "whale", "🐳", ""}, {"ck", "kuh", "duck", "🦆", "ck sounds like k"},
             {"qu", "kwuh", "queen", "👸", ""}, {"oo", "ooh", "moon", "🌙", ""}, {"ee", "eee", "bee", "🐝", ""},
+            {"oa", "oh", "boat", "⛵", "vowel team: o and a say oh"}, {"ai", "ay", "rain", "🌧️", "vowel team: a and i say ay"},
+            {"igh", "eye", "night", "🌃", "three letters, one sound: eye"}, {"ar", "ar", "car", "🚗", ""}, {"or", "or", "fork", "🍴", ""},
+            {"ou", "ow", "cloud", "☁️", ""}, {"oi", "oy", "coin", "🪙", ""}, {"ow", "oh", "snow", "❄️", "ow can also say ow, as in cow 🐄"},
             {"bl", "bluh", "blue", "🔵", ""}, {"br", "bruh", "bread", "🍞", ""}, {"cl", "kluh", "clock", "⏰", ""},
             {"cr", "kruh", "crab", "🦀", ""}, {"dr", "druh", "drum", "🥁", ""}, {"fl", "fluh", "flower", "🌸", ""},
             {"fr", "fruh", "frog", "🐸", ""}, {"gr", "gruh", "grapes", "🍇", ""}, {"pl", "pluh", "plane", "✈️", ""},
@@ -132,6 +135,17 @@ final class Data {
             {"sw", "swuh", "swim", "🏊", ""}, {"tr", "truh", "tree", "🌳", ""},
             {"ps", "sss", "psychology", "🧠", "p is silent — ps sounds like s"}, {"kn", "nuh", "knife", "🔪", "k is silent — kn sounds like n"},
             {"wr", "ruh", "write", "✍️", "w is silent — wr sounds like r"}, {"mb", "muh", "lamb", "🐑", "b is silent — mb sounds like m"}};
+
+    /** Tricky sight words (they don't follow the usual sounds) with a short example sentence. */
+    static final String[][] SIGHT_WORDS = {
+            {"the", "The cat is big."}, {"said", "Mum said yes."}, {"was", "It was hot."}, {"you", "I like you."},
+            {"they", "They can run."}, {"are", "We are happy."}, {"my", "This is my bag."}, {"he", "He is tall."},
+            {"she", "She can sing."}, {"we", "We play ball."}, {"me", "Look at me!"}, {"be", "Be kind."},
+            {"to", "Go to bed."}, {"do", "I can do it."}, {"of", "A cup of milk."}, {"come", "Come here."},
+            {"some", "Have some cake."}, {"one", "I have one dog."}, {"have", "I have a pen."}, {"like", "I like apples."},
+            {"here", "Sit here."}, {"there", "The bus is there."}, {"where", "Where is my hat?"}, {"what", "What is that?"},
+            {"who", "Who is it?"}, {"little", "A little bird."}, {"people", "Many people came."}, {"could", "I could see it."},
+            {"would", "Would you like tea?"}, {"friend", "You are my friend."}};
 
     private Data() {
     }
@@ -241,6 +255,15 @@ final class Data {
                     Item it = new Item(r[0], r[3], r[2], "", r[0].toUpperCase() + " says, " + r[1] + ". " + r[2] + ".", BRIGHT[i % BRIGHT.length]);
                     it.note = "says “" + r[1] + "”";
                     it.hear = r[2];
+                    out.add(it);
+                }
+                break;
+            case SIGHT:
+                for (int i = 0; i < SIGHT_WORDS.length; i++) {
+                    String[] r = SIGHT_WORDS[i];
+                    Item it = new Item(r[0], null, "", "“" + r[1] + "”", r[0] + ". " + r[1], BRIGHT[i % BRIGHT.length]);
+                    it.note = "tricky word — learn it by sight";
+                    it.hear = r[0];
                     out.add(it);
                 }
                 break;

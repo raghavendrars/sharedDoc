@@ -11,14 +11,25 @@ import android.speech.tts.UtteranceProgressListener;
 import java.util.List;
 import java.util.Locale;
 
-/** Speaks with the phone's own text-to-speech voice (English, Kannada, Hindi), plays right/wrong tones and tells the talking face when it speaks. */
+/**
+ * Speaks with the phone's own text-to-speech voice (English in one chosen accent, Kannada, Hindi), plays right/wrong
+ * tones, tells the talking face when it speaks, and reports which word is being read (for read-along).
+ */
 final class Speaker implements TextToSpeech.OnInitListener {
     interface Talk {
         void talking(boolean on);
     }
 
+    interface Track {
+        void range(String id, int start, int end);
+
+        void done(String id);
+    }
+
     boolean on;
     Talk talk;
+    Track track;
+    private String accent;
     private TextToSpeech tts;
     private boolean ready;
     private String current = "";
@@ -26,8 +37,9 @@ final class Speaker implements TextToSpeech.OnInitListener {
     private int seq;
     private final Handler main = new Handler(Looper.getMainLooper());
 
-    Speaker(Context c, boolean on) {
+    Speaker(Context c, boolean on, String accent) {
         this.on = on;
+        this.accent = accent;
         try {
             tts = new TextToSpeech(c.getApplicationContext(), this);
         } catch (RuntimeException e) {
@@ -38,6 +50,18 @@ final class Speaker implements TextToSpeech.OnInitListener {
         } catch (RuntimeException e) {
             tone = null;
         }
+    }
+
+    /** "GB", "US" or "IN": the one English accent used everywhere in the app. */
+    static Locale english(String accent) {
+        if ("US".equals(accent)) return Locale.US;
+        if ("IN".equals(accent)) return new Locale("en", "IN");
+        return Locale.UK;
+    }
+
+    void setAccent(String accent) {
+        this.accent = accent;
+        current = "";
     }
 
     @Override
@@ -54,8 +78,11 @@ final class Speaker implements TextToSpeech.OnInitListener {
                 }
 
                 @Override
-                public void onDone(String id) {
+                public void onDone(final String id) {
                     post(false);
+                    main.post(() -> {
+                        if (track != null) track.done(id);
+                    });
                 }
 
                 @Override
@@ -66,6 +93,13 @@ final class Speaker implements TextToSpeech.OnInitListener {
                 @Override
                 public void onStop(String id, boolean interrupted) {
                     post(false);
+                }
+
+                @Override
+                public void onRangeStart(final String id, final int start, final int end, int frame) {
+                    main.post(() -> {
+                        if (track != null) track.range(id, start, end);
+                    });
                 }
             });
         } catch (RuntimeException e) {
@@ -83,14 +117,11 @@ final class Speaker implements TextToSpeech.OnInitListener {
         return result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED;
     }
 
-    /** Switches the voice. English tries the Indian accent first, then US, then any English. */
+    /** Switches the voice. English uses the chosen accent, falling back to any English voice. */
     private boolean use(String lang) {
         boolean good;
-        if (lang.equals("en")) {
-            good = ok(tts.setLanguage(new Locale("en", "IN"))) || ok(tts.setLanguage(Locale.US)) || ok(tts.setLanguage(Locale.ENGLISH));
-        } else {
-            good = ok(tts.setLanguage(new Locale(lang, "IN")));
-        }
+        if (lang.equals("en")) good = ok(tts.setLanguage(english(accent))) || ok(tts.setLanguage(Locale.ENGLISH));
+        else good = ok(tts.setLanguage(new Locale(lang, "IN")));
         if (good) current = lang;
         return good;
     }
@@ -101,6 +132,16 @@ final class Speaker implements TextToSpeech.OnInitListener {
 
     /** Returns false only when the phone has no voice for that language; true otherwise (including when sound is off). */
     boolean say(String s, String lang) {
+        return speak(s, lang, "u" + (seq++));
+    }
+
+    /** Speaks and returns the id that read-along callbacks will carry, or null if nothing was spoken. */
+    String sayTracked(String s) {
+        String id = "t" + (seq++);
+        return speak(s, "en", id) && on && ready ? id : null;
+    }
+
+    private boolean speak(String s, String lang, String id) {
         if (!on || s == null || s.isEmpty()) return true;
         if (!ready) return lang.equals("en");
         try {
@@ -108,7 +149,7 @@ final class Speaker implements TextToSpeech.OnInitListener {
                 use("en");
                 return false;
             }
-            tts.speak(s, TextToSpeech.QUEUE_FLUSH, null, "u" + (seq++));
+            tts.speak(s, TextToSpeech.QUEUE_FLUSH, null, id);
         } catch (RuntimeException ignored) {
         }
         return true;

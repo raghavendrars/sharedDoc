@@ -373,6 +373,40 @@ final class ParentScreen {
         c.addView(online);
         line(a, c, "Questions come from opentdb.com (in English, easy level) and are not checked by this app. Without internet the built-in questions are used.", 0xFF78909C);
 
+        // accent
+        c = card(a, list, "🗣️ English voice");
+        line(a, c, "Use one accent everywhere so your child hears the same sounds every time.", 0xFF78909C);
+        LinearLayout ar = new LinearLayout(a);
+        ar.setPadding(0, Ui.dp(a, 8), 0, 0);
+        final String[][] accents = {{"GB", "British"}, {"US", "American"}, {"IN", "Indian"}};
+        String curAcc = a.prefs.getString("accent", "GB");
+        for (final String[] acc : accents) {
+            TextView b = smallButton(a, (acc[0].equals(curAcc) ? "✓ " : "") + acc[1], () -> {
+                a.prefs.edit().putString("accent", acc[0]).apply();
+                a.speaker.setAccent(acc[0]);
+                a.speaker.say("Hello! This is the " + acc[1] + " English voice. Cat, ship, boat.");
+                refresh(a);
+            });
+            if (!acc[0].equals(curAcc)) b.setAlpha(0.65f);
+            ar.addView(b, Ui.lp(a, 0, Ui.WRAP, 1, 3));
+        }
+        c.addView(ar);
+        line(a, c, "If a voice is not installed, the phone's default English voice is used.", 0xFF78909C);
+
+        // ideas for parents
+        c = card(a, list, "💡 Ideas for home activities");
+        final String[][] ideas = {
+                {"UNICEF — parenting and play", "https://www.unicef.org/parenting"},
+                {"Oxford Owl — free reading at home", "https://www.oxfordowl.co.uk/for-home/"},
+                {"Pinterest — learning activity ideas", "https://www.pinterest.com/search/pins/?q=learning%20activities%20for%20kids"}};
+        for (final String[] idea : ideas) {
+            TextView b = smallButton(a, "🌐 " + idea[0], () -> a.openLink(idea[1]));
+            LinearLayout.LayoutParams ilp = Ui.lp(Ui.MATCH, Ui.WRAP, 0);
+            ilp.topMargin = Ui.dp(a, 8);
+            c.addView(b, ilp);
+        }
+        line(a, c, "These open outside the app and need the internet.", 0xFF78909C);
+
         // backup
         c = card(a, list, "💾 Backup");
         line(a, c, "Saves settings, PIN, stars, time history, scores, sentences and links to a file you choose (for example on Google Drive).", 0xFF78909C);

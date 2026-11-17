@@ -107,7 +107,7 @@ final class CardScreen {
     private void listen() {
         final Item it = items.get(idx);
         if (it.hear == null) return;
-        a.listen(it.lang + "-IN", "Say: " + it.hear, results -> {
+        a.listen(it.lang.equals("en") ? a.enTag() : it.lang + "-IN", "Say: " + it.hear, results -> {
             String want = it.hear.toLowerCase().trim();
             boolean ok = false;
             for (String r : results) if (r.toLowerCase().contains(want)) ok = true;

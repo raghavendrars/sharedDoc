@@ -57,7 +57,7 @@ final class HomeScreen {
     }
 
     private static Runnable quizTime(MainActivity a) {
-        int n = QuizScreen.TITLES.length;
+        int n = QuizScreen.QUIZ_TIME;
         String[] labels = new String[n];
         Runnable[] go = new Runnable[n];
         for (int i = 0; i < n; i++) {
@@ -140,8 +140,27 @@ final class HomeScreen {
                                 () -> a.show(SentenceScreen.own(a), false, SentenceScreen.COLOR)})),
                 new Tile("🔤", "Letters", 0xFFF4511E, cards(a, Data.LETTERS, "Letters", 0xFFF4511E)),
                 new Tile("🗣️", "Letter sounds", 0xFF3949AB, menu(a, "Letter sounds", 0xFF3949AB,
-                        new String[]{"a b c sounds", "Blends: sh, ch, th…"},
-                        new Runnable[]{cards(a, Data.PH_LETTERS, "Letter sounds", 0xFF3949AB), cards(a, Data.PH_BLENDS, "Blends", 0xFF3949AB)}))});
+                        new String[]{"a b c sounds", "Digraphs, vowel teams & blends: sh, ee, oa…", "Sound quiz"},
+                        new Runnable[]{cards(a, Data.PH_LETTERS, "Letter sounds", 0xFF3949AB), cards(a, Data.PH_BLENDS, "Sound teams", 0xFF3949AB),
+                                QuizScreen.open(a, QuizScreen.PHONICS)})),
+                new Tile("📚", "Read-along", StoryScreen.COLOR, StoryScreen.shelf(a)),
+                new Tile("👀", "Sight words", QuizScreen.COLORS[QuizScreen.SIGHT], menu(a, "Sight words", QuizScreen.COLORS[QuizScreen.SIGHT],
+                        new String[]{"Word cards", "Sight word quiz"},
+                        new Runnable[]{cards(a, Data.SIGHT, "Sight words", QuizScreen.COLORS[QuizScreen.SIGHT]), QuizScreen.open(a, QuizScreen.SIGHT)})),
+                new Tile("💬", "Talk time", TalkScreen.COLOR, () -> a.show(TalkScreen.build(a), false, TalkScreen.COLOR, MainActivity.AUDIO))});
+
+        section(a, list, "🏠 Play & make", new Tile[]{
+                new Tile("🔍", "Scavenger hunt", HuntScreen.COLOR, HuntScreen.shelf(a)),
+                new Tile("🧺", "Sensory bin", BinScreen.COLOR, menu(a, "Sensory bin", BinScreen.COLOR,
+                        new String[]{"🔤  Hidden letters", "🔢  Hidden numbers", "🔺  Hidden shapes"},
+                        new Runnable[]{BinScreen.open(a, BinScreen.LETTERS), BinScreen.open(a, BinScreen.NUMBERS), BinScreen.open(a, BinScreen.SHAPES)})),
+                new Tile("🧪", "Science lab", GuideScreen.SCIENCE, GuideScreen.shelf(a, true)),
+                new Tile("🎨", "Colour & paint", ColourScreen.COLOR, () -> a.show(ColourScreen.build(a), false, ColourScreen.COLOR)),
+                new Tile("✂️", "Crafts", GuideScreen.CRAFT, GuideScreen.shelf(a, false)),
+                new Tile("📒", "Activity book", 0xFF00897B, menu(a, "Activity book", 0xFF00897B,
+                        new String[]{"🧱  Patterns & counting", "🅰️  Missing vowel", "🖼️  Picture & word", "🧐  Odd one out"},
+                        new Runnable[]{QuizScreen.open(a, QuizScreen.PATTERNS), QuizScreen.open(a, QuizScreen.VOWELS),
+                                QuizScreen.open(a, QuizScreen.PICWORD), QuizScreen.open(a, QuizScreen.ODD)}))});
 
         section(a, list, "❓ Quiz Time", new Tile[]{
                 new Tile("❓", "Quiz Time", QuizScreen.QUIZ_COLOR, quizTime(a)),

@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
     Stats stats;
     final Random rnd = new Random();
     /** Stops the camera, microphone or player of the current screen; run when the screen changes or the app is paused. */
-    Runnable cleanup;
+    private Runnable cleanup, nextCleanup;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final SparseArray<Result> results = new SparseArray<>();
     private final SparseArray<Runnable> perms = new SparseArray<>();
@@ -65,7 +65,7 @@ public class MainActivity extends Activity {
         prefs = getSharedPreferences("kids", MODE_PRIVATE);
         stats = new Stats(this);
         stats.prune(today());
-        speaker = new Speaker(this, prefs.getBoolean("sound", true));
+        speaker = new Speaker(this, prefs.getBoolean("sound", true), prefs.getString("accent", "GB"));
         root = new FrameLayout(this);
         setContentView(root);
         home();
@@ -85,11 +85,10 @@ public class MainActivity extends Activity {
         cat = category;
         gen++;
         atHome = isHome;
-        if (cleanup != null) {
-            Runnable c = cleanup;
-            cleanup = null;
-            c.run();
-        }
+        // run the old screen's cleanup, then keep the one the new screen registered while it was built
+        if (cleanup != null) cleanup.run();
+        cleanup = nextCleanup;
+        nextCleanup = null;
         speaker.stop();
         InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
         if (imm != null) imm.hideSoftInputFromWindow(root.getWindowToken(), 0);
@@ -158,7 +157,27 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** Opens a web page for parents (not counted as the child's time). */
+    void openLink(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, "No browser found on this phone", Toast.LENGTH_LONG).show();
+        }
+    }
+
     // ---- small helpers for screens ----
+
+    /** Called while a screen is being built: stops its camera, microphone, player or read-along when the child leaves it. */
+    void onLeave(Runnable r) {
+        nextCleanup = r;
+    }
+
+    /** Language tag for voice typing in the chosen English accent, e.g. "en-GB". */
+    String enTag() {
+        String acc = prefs.getString("accent", "GB");
+        return "en-" + acc;
+    }
 
     /** Runs r after ms, unless the child has moved to another screen meanwhile. */
     void later(long ms, final Runnable r) {

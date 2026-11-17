@@ -96,6 +96,13 @@ final class FaceView extends View implements Speaker.Talk {
                 return L;
             case "ss":
                 return S;
+            case "oa":
+            case "oi":
+            case "or":
+                return O;
+            case "igh":
+            case "ou":
+                return A;
             case "ph":
                 return FV;
             default:

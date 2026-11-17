@@ -26,12 +26,17 @@ import java.util.Random;
 
 /** Quiz Time: ten pick-one-of-four questions. A star for every question answered right the first time. */
 final class QuizScreen {
-    static final int MATHS = 0, ENGLISH = 1, EVS = 2, GK = 3, ANIMALS = 4, PLANTS = 5, PHONICS = 6, KANNADA = 7, HINDI = 8;
-    static final String[] TITLES = {"Maths", "English", "EVS", "General Knowledge", "Animals", "Plants", "Phonics", "Kannada", "Hindi"};
-    static final String[] ICONS = {"➕", "🔤", "🌍", "💡", "🐾", "🌱", "🗣️", "ಅ", "अ"};
-    static final int[] COLORS = {0xFF00ACC1, 0xFF6A1B9A, 0xFF2E7D32, 0xFF1565C0, 0xFF6D4C41, 0xFF388E3C, 0xFF3949AB, 0xFFD81B60, 0xFFEF6C00};
+    static final int MATHS = 0, ENGLISH = 1, EVS = 2, GK = 3, ANIMALS = 4, PLANTS = 5, PHONICS = 6, KANNADA = 7, HINDI = 8,
+            PATTERNS = 9, VOWELS = 10, PICWORD = 11, ODD = 12, SIGHT = 13;
+    /** How many of the modes above are listed under Quiz Time; the rest belong to the Activity book and Sight words. */
+    static final int QUIZ_TIME = 9;
+    static final String[] TITLES = {"Maths", "English", "EVS", "General Knowledge", "Animals", "Plants", "Phonics", "Kannada", "Hindi",
+            "Patterns & counting", "Missing vowel", "Picture & word", "Odd one out", "Sight words"};
+    static final String[] ICONS = {"➕", "🔤", "🌍", "💡", "🐾", "🌱", "🗣️", "ಅ", "अ", "🧱", "🅰️", "🖼️", "🧐", "👀"};
+    static final int[] COLORS = {0xFF00ACC1, 0xFF6A1B9A, 0xFF2E7D32, 0xFF1565C0, 0xFF6D4C41, 0xFF388E3C, 0xFF3949AB, 0xFFD81B60, 0xFFEF6C00,
+            0xFF00897B, 0xFFAD1457, 0xFF7B1FA2, 0xFF455A64, 0xFFF4511E};
     /** Open Trivia DB category used when a parent allows online questions (0 = offline only). */
-    private static final int[] ONLINE = {0, 0, 17, 9, 27, 0, 0, 0, 0};
+    private static final int[] ONLINE = {0, 0, 17, 9, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     static final int QUIZ_COLOR = 0xFF5C6BC0;
     private static final int ROUND = 10;
     static final String[] PRAISE = {"Well done!", "Great job!", "Super!", "Yes! That is right!", "Awesome!"};
@@ -41,7 +46,7 @@ final class QuizScreen {
     }
 
     private static final class Q {
-        String prompt, say, visual, lang = "en";
+        String prompt, say, visual, why, lang = "en";
         Opt[] o;
         int ok;
     }
@@ -185,6 +190,21 @@ final class QuizScreen {
             case ANIMALS:
                 q = bank(QBank.ANIMALS);
                 break;
+            case PATTERNS:
+                q = patterns();
+                break;
+            case VOWELS:
+                q = vowels();
+                break;
+            case PICWORD:
+                q = picWord();
+                break;
+            case ODD:
+                q = odd();
+                break;
+            case SIGHT:
+                q = sight();
+                break;
             default:
                 q = bank(QBank.PLANTS);
                 break;
@@ -237,7 +257,7 @@ final class QuizScreen {
             t.setBackground(Ui.tile(a, 0xFF66BB6A, 22));
             Ui.bounce(t);
             a.speaker.good();
-            a.speaker.say(PRAISE[rnd.nextInt(PRAISE.length)]);
+            a.speaker.say(PRAISE[rnd.nextInt(PRAISE.length)] + (q.why != null ? " " + q.why : ""));
             if (firstTry) {
                 won++;
                 a.addStars(1);
@@ -459,6 +479,123 @@ final class QuizScreen {
             q.say = nums[ix[0]];
         }
         fill(q, vals, right);
+        return q;
+    }
+
+    // ---- activity book ----
+
+    private static final String[] BLOCKS = {"🟥", "🟦", "🟨", "🟩", "🟪", "🟧"};
+    private static final String[] SHAPE_SET = {"🔺", "⭐", "❤️", "⚫", "🔷", "🌙"};
+    private static final String[][] CVC = {{"cat", "🐱"}, {"dog", "🐶"}, {"sun", "☀️"}, {"pig", "🐷"}, {"hat", "🎩"}, {"bus", "🚌"},
+            {"cup", "☕"}, {"bed", "🛏️"}, {"hen", "🐔"}, {"fox", "🦊"}, {"box", "📦"}, {"map", "🗺️"}, {"pen", "🖊️"}, {"bat", "🦇"},
+            {"net", "🥅"}, {"van", "🚐"}, {"web", "🕸️"}, {"bag", "👜"}, {"lip", "👄"}, {"bug", "🐛"}};
+    private static final String[][] MORE_WORDS = {{"frog", "🐸"}, {"fish", "🐟"}, {"ship", "🚢"}, {"duck", "🦆"}, {"milk", "🥛"},
+            {"drum", "🥁"}, {"crab", "🦀"}, {"star", "⭐"}, {"tree", "🌳"}, {"moon", "🌙"}, {"hand", "✋"}, {"sock", "🧦"},
+            {"bell", "🔔"}, {"tent", "⛺"}, {"gift", "🎁"}, {"boat", "⛵"}, {"rain", "🌧️"}, {"cake", "🎂"}};
+    /** Group name, then members. */
+    private static final String[][] GROUPS = {
+            {"fruits", "🍎", "🍌", "🍇", "🍊", "🍓"}, {"vehicles", "🚗", "🚌", "🚲", "🚂", "✈️"},
+            {"clothes", "👕", "👖", "🧦", "👗", "🧢"}, {"weather", "☀️", "🌧️", "❄️", "🌈", "⛈️"},
+            {"body parts", "👃", "👂", "👀", "✋", "🦶"}, {"musical instruments", "🎸", "🥁", "🎺", "🎻", "🎹"},
+            {"sea animals", "🐟", "🐙", "🐬", "🦀", "🐳"}, {"vegetables", "🥕", "🥦", "🌽", "🥔", "🍆"}};
+
+    private Q patterns() {
+        Q q = new Q();
+        List<String> pool = new ArrayList<>(Arrays.asList(rnd.nextBoolean() ? BLOCKS : SHAPE_SET));
+        Collections.shuffle(pool, rnd);
+        if (rnd.nextInt(3) == 0) {
+            String one = pool.get(0), other = pool.get(1);
+            int count = 2 + rnd.nextInt(7), extra = 1 + rnd.nextInt(4);
+            List<String> items = new ArrayList<>();
+            for (int i = 0; i < count; i++) items.add(one);
+            for (int i = 0; i < extra; i++) items.add(other);
+            Collections.shuffle(items, rnd);
+            StringBuilder b = new StringBuilder();
+            for (String s : items) b.append(s);
+            q.prompt = "How many " + one + " ?";
+            q.visual = b.toString();
+            q.say = "Count them carefully!";
+            List<String> vals = new ArrayList<>();
+            vals.add(String.valueOf(count));
+            while (vals.size() < 4) {
+                String s = String.valueOf(Math.max(1, count + rnd.nextInt(7) - 3));
+                if (!vals.contains(s)) vals.add(s);
+            }
+            fill(q, vals, String.valueOf(count));
+            return q;
+        }
+        String[] units = {"AB", "AAB", "ABB", "ABC", "AABB"};
+        String u = units[rnd.nextInt(units.length)];
+        int n = Math.max(6, u.length() * 2);
+        StringBuilder seq = new StringBuilder();
+        for (int i = 0; i < n; i++) seq.append(pool.get(u.charAt(i % u.length()) - 'A'));
+        String right = pool.get(u.charAt(n % u.length()) - 'A');
+        q.prompt = "What comes next?";
+        q.visual = seq + "❓";
+        q.say = q.prompt;
+        fill(q, new ArrayList<>(pool.subList(0, 4)), right);
+        return q;
+    }
+
+    private Q vowels() {
+        Q q = new Q();
+        String[] r = CVC[rnd.nextInt(CVC.length)];
+        String w = r[0], vowel = w.substring(1, 2);
+        q.prompt = w.charAt(0) + " _ " + w.charAt(2);
+        q.visual = r[1];
+        q.say = "Which vowel is missing? " + w;
+        List<String> vals = new ArrayList<>(Arrays.asList("a", "e", "i", "o", "u"));
+        vals.remove(vowel);
+        Collections.shuffle(vals, rnd);
+        vals = new ArrayList<>(vals.subList(0, 3));
+        vals.add(vowel);
+        fill(q, vals, vowel);
+        q.why = "It says " + w + ".";
+        return q;
+    }
+
+    private Q picWord() {
+        Q q = new Q();
+        String[][] all = Data.join(CVC, MORE_WORDS);
+        int[] ix = fourDistinct(all, 0);
+        List<String> vals = new ArrayList<>();
+        for (int i : ix) vals.add(all[i][0]);
+        q.prompt = "Read the words. Which one is this?";
+        q.visual = all[ix[0]][1];
+        q.say = "Which word matches the picture?";
+        fill(q, vals, all[ix[0]][0]);
+        q.why = "It is a " + all[ix[0]][0] + ".";
+        return q;
+    }
+
+    private Q odd() {
+        Q q = new Q();
+        int g = rnd.nextInt(GROUPS.length), o;
+        do o = rnd.nextInt(GROUPS.length);
+        while (o == g);
+        List<String> members = new ArrayList<>(Arrays.asList(GROUPS[g]).subList(1, GROUPS[g].length));
+        Collections.shuffle(members, rnd);
+        String odd = GROUPS[o][1 + rnd.nextInt(GROUPS[o].length - 1)];
+        List<String> vals = new ArrayList<>(members.subList(0, 3));
+        vals.add(odd);
+        q.prompt = "Which one does not belong?";
+        q.say = q.prompt;
+        fill(q, vals, odd);
+        q.why = "The others are all " + GROUPS[g][0] + ".";
+        return q;
+    }
+
+    private Q sight() {
+        Q q = new Q();
+        String[][] w = Data.SIGHT_WORDS;
+        int[] ix = fourDistinct(w, 0);
+        List<String> vals = new ArrayList<>();
+        for (int i : ix) vals.add(w[i][0]);
+        q.prompt = "🔊 Find the missing word";
+        q.say = w[ix[0]][0] + ". " + w[ix[0]][1] + " " + w[ix[0]][0] + ".";
+        // the sentence with the word blanked out, so it also works by reading alone
+        q.visual = w[ix[0]][1].replaceFirst("(?i)\\b" + w[ix[0]][0] + "\\b", "___");
+        fill(q, vals, w[ix[0]][0]);
         return q;
     }
 }

@@ -22,7 +22,9 @@ import java.util.List;
 final class LipsScreen {
     static final int COLOR = 0xFFAD1457;
     private static final String[][] PAIRS = {
-            {"sh", "shh", "ship", "🚢"}, {"ch", "chuh", "chair", "🪑"}, {"th", "thuh", "thumb", "👍"}, {"oo", "ooh", "moon", "🌙"}, {"ee", "eee", "bee", "🐝"}};
+            {"sh", "shh", "ship", "🚢"}, {"ch", "chuh", "chair", "🪑"}, {"th", "thuh", "thumb", "👍"}, {"oo", "ooh", "moon", "🌙"}, {"ee", "eee", "bee", "🐝"},
+            {"oa", "oh", "boat", "⛵"}, {"ai", "ay", "rain", "🌧️"}, {"igh", "eye", "night", "🌃"}, {"ar", "ar", "car", "🚗"},
+            {"or", "or", "fork", "🍴"}, {"ou", "ow", "cloud", "☁️"}, {"oi", "oy", "coin", "🪙"}};
 
     private final MainActivity a;
     private final List<String[]> sounds = new ArrayList<>();
@@ -33,6 +35,7 @@ final class LipsScreen {
     private TextureView tex;
     private Camera cam;
     private TextView letter, info, tip, feedback, mirrorBtn;
+    private Voice voice;
 
     private LipsScreen(MainActivity a) {
         this.a = a;
@@ -72,13 +75,29 @@ final class LipsScreen {
         feedback.setPadding(Ui.dp(a, 16), Ui.dp(a, 4), Ui.dp(a, 16), 0);
         page.addView(feedback);
 
+        WaveView wave = new WaveView(a);
+        LinearLayout.LayoutParams wlp = Ui.lp(Ui.MATCH, Ui.dp(a, 34), 0);
+        wlp.setMargins(Ui.dp(a, 20), Ui.dp(a, 4), Ui.dp(a, 20), 0);
+        page.addView(wave, wlp);
+        final TextView[] recBtn = new TextView[1];
+        voice = new Voice(a, wave, "lips-voice", (msg, recording) -> {
+            feedback.setText(msg);
+            recBtn[0].setText(recording ? "⏹ Stop" : "🎙 Record");
+        });
+
         LinearLayout row = new LinearLayout(a);
-        row.setPadding(Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 8), Ui.dp(a, 4));
-        row.addView(tool("🔊 Hear", this::hear), Ui.lp(a, 0, Ui.dp(a, 50), 1, 4));
-        row.addView(tool("🎤 Your turn", this::yourTurn), Ui.lp(a, 0, Ui.dp(a, 50), 1, 4));
-        mirrorBtn = tool("🪞 Mirror", this::toggleMirror);
-        row.addView(mirrorBtn, Ui.lp(a, 0, Ui.dp(a, 50), 1, 4));
+        row.setPadding(Ui.dp(a, 8), Ui.dp(a, 6), Ui.dp(a, 8), 0);
+        row.addView(tool("🔊 Teacher", this::hear), Ui.lp(a, 0, Ui.dp(a, 46), 1, 3));
+        recBtn[0] = tool("🎙 Record", () -> voice.toggleRecord(sounds.get(sel)[2]));
+        row.addView(recBtn[0], Ui.lp(a, 0, Ui.dp(a, 46), 1, 3));
+        row.addView(tool("▶ Me", () -> voice.play()), Ui.lp(a, 0, Ui.dp(a, 46), 1, 3));
         page.addView(row);
+        LinearLayout row2 = new LinearLayout(a);
+        row2.setPadding(Ui.dp(a, 8), 0, Ui.dp(a, 8), Ui.dp(a, 2));
+        row2.addView(tool("🎤 Check my word", this::yourTurn), Ui.lp(a, 0, Ui.dp(a, 46), 1.3f, 3));
+        mirrorBtn = tool("🪞 Mirror", this::toggleMirror);
+        row2.addView(mirrorBtn, Ui.lp(a, 0, Ui.dp(a, 46), 1, 3));
+        page.addView(row2);
 
         FlowLayout grid = new FlowLayout(a);
         int p = Ui.dp(a, 12);
@@ -97,7 +116,10 @@ final class LipsScreen {
         sv.addView(grid);
         page.addView(sv, Ui.lp(Ui.MATCH, 0, 1));
 
-        a.cleanup = this::stopMirror;
+        a.onLeave(() -> {
+            stopMirror();
+            voice.release();
+        });
         select(0, false);
         return page;
     }
@@ -131,7 +153,7 @@ final class LipsScreen {
 
     private void yourTurn() {
         final String[] s = sounds.get(sel);
-        a.listen("en-IN", "Say: " + s[2], results -> {
+        a.listen(a.enTag(), "Say: " + s[2], results -> {
             boolean ok = false;
             for (String r : results) if (r.toLowerCase().contains(s[2])) ok = true;
             if (ok) {

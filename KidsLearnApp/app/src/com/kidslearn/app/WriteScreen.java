@@ -36,14 +36,11 @@ final class WriteScreen {
     private int idx;
     private WritePad pad;
     private TextView target, result, recBtn, guideBtn;
-    private MediaRecorder rec;
-    private MediaPlayer player;
-    private final File file;
+    private Voice voice;
 
     private WriteScreen(MainActivity a, int mode) {
         this.a = a;
         this.mode = mode;
-        this.file = new File(a.getCacheDir(), "my-voice.m4a");
         switch (mode) {
             case 0:
                 for (char c = 'A'; c <= 'Z'; c++) items.add(String.valueOf(c));
@@ -87,6 +84,14 @@ final class WriteScreen {
 
         result = Ui.text(a, "", 19, 0xFFFFF59D, true);
         page.addView(result);
+        WaveView wave = new WaveView(a);
+        LinearLayout.LayoutParams wlp = Ui.lp(Ui.MATCH, Ui.dp(a, 34), 0);
+        wlp.setMargins(Ui.dp(a, 20), Ui.dp(a, 2), Ui.dp(a, 20), 0);
+        page.addView(wave, wlp);
+        voice = new Voice(a, wave, "write-voice", (msg, recording) -> {
+            result.setText(msg);
+            recBtn.setText(recording ? "⏹ Stop" : "🎙 Record");
+        });
 
         LinearLayout row1 = new LinearLayout(a);
         row1.setPadding(Ui.dp(a, 6), Ui.dp(a, 4), Ui.dp(a, 6), 0);
@@ -111,7 +116,7 @@ final class WriteScreen {
         row2.addView(tool("▶ Hear me", this::playBack), Ui.lp(a, 0, Ui.dp(a, 52), 1f, 3));
         page.addView(row2);
 
-        a.cleanup = this::stopAudio;
+        a.onLeave(voice::release);
         show(0);
         return page;
     }
@@ -176,89 +181,14 @@ final class WriteScreen {
         if (starred.add(idx)) a.addStars(stars);
     }
 
-    // ---- voice recording ----
+    // ---- voice recording (with a live sound wave) ----
 
     private void record() {
-        if (rec != null) {
-            stopRec();
-            result.setText("Recorded! Press ▶ Hear me");
-            return;
-        }
-        a.withPermission(Manifest.permission.RECORD_AUDIO, this::startRec);
-    }
-
-    private void startRec() {
-        stopPlay();
-        a.speaker.stop();
-        try {
-            rec = new MediaRecorder();
-            rec.setAudioSource(MediaRecorder.AudioSource.MIC);
-            rec.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-            rec.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            rec.setAudioSamplingRate(44100);
-            rec.setAudioEncodingBitRate(96000);
-            rec.setMaxDuration(10000);
-            rec.setOutputFile(file.getAbsolutePath());
-            rec.setOnInfoListener((mr, what, extra) -> {
-                if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
-                    stopRec();
-                    result.setText("Recorded! Press ▶ Hear me");
-                }
-            });
-            rec.prepare();
-            rec.start();
-            recBtn.setText("⏹ Stop");
-            result.setText("🔴 Recording… say “" + items.get(idx) + "”");
-        } catch (Exception e) {
-            if (rec != null) rec.release();
-            rec = null;
-            result.setText("The microphone could not be used");
-        }
-    }
-
-    private void stopRec() {
-        if (rec == null) return;
-        try {
-            rec.stop();
-        } catch (RuntimeException ignored) {
-        }
-        rec.release();
-        rec = null;
-        if (recBtn != null) recBtn.setText("🎙 Record");
+        voice.toggleRecord(items.get(idx));
     }
 
     private void playBack() {
-        if (rec != null) stopRec();
-        if (!file.exists() || file.length() == 0) {
-            result.setText("Press 🎙 Record first");
-            return;
-        }
-        stopPlay();
-        try {
-            player = new MediaPlayer();
-            player.setDataSource(file.getAbsolutePath());
-            player.setOnCompletionListener(mp -> stopPlay());
-            player.prepare();
-            player.start();
-            result.setText("🔈 This is you!");
-        } catch (Exception e) {
-            stopPlay();
-            result.setText("Could not play the recording");
-        }
-    }
-
-    private void stopPlay() {
-        if (player == null) return;
-        try {
-            player.release();
-        } catch (RuntimeException ignored) {
-        }
-        player = null;
-    }
-
-    private void stopAudio() {
-        stopRec();
-        stopPlay();
+        voice.play();
     }
 }
 
