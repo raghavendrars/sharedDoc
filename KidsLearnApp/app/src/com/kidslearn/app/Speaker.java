@@ -64,12 +64,63 @@ final class Speaker implements TextToSpeech.OnInitListener {
         current = "";
     }
 
+    private float rate = 0.85f, pitch = 1.1f;
+    private final java.util.Map<String, String> voiceNames = new java.util.HashMap<>();
+
+    void setRate(float r) {
+        rate = r;
+        if (tts != null && ready) tts.setSpeechRate(r);
+    }
+
+    void setPitch(float p) {
+        pitch = p;
+        if (tts != null && ready) tts.setPitch(p);
+    }
+
+    /** A chosen installed voice for "en", "kn" or "hi" (null = the phone's default). */
+    void setVoice(String lang, String name) {
+        if (name == null || name.isEmpty()) voiceNames.remove(lang);
+        else voiceNames.put(lang, name);
+        current = "";
+    }
+
+    /** Names of the installed voices for a language (empty until the voice engine is ready). */
+    java.util.List<String> voices(String lang) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        if (tts == null || !ready) return out;
+        String want = lang.equals("en") ? "en" : lang;
+        try {
+            for (android.speech.tts.Voice v : tts.getVoices()) {
+                if (v.getLocale() == null || !want.equals(v.getLocale().getLanguage())) continue;
+                if (lang.equals("en") && !v.getLocale().getCountry().equals(english(accent).getCountry())) continue;
+                if (v.getFeatures() != null && v.getFeatures().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)) continue;
+                out.add(v.getName());
+            }
+        } catch (RuntimeException ignored) {
+        }
+        java.util.Collections.sort(out);
+        return out;
+    }
+
+    private void applyVoice(String lang) {
+        String name = voiceNames.get(lang);
+        if (name == null) return;
+        try {
+            for (android.speech.tts.Voice v : tts.getVoices())
+                if (v.getName().equals(name)) {
+                    tts.setVoice(v);
+                    return;
+                }
+        } catch (RuntimeException ignored) {
+        }
+    }
+
     @Override
     public void onInit(int status) {
         if (status != TextToSpeech.SUCCESS || tts == null) return;
         try {
-            tts.setSpeechRate(0.85f);
-            tts.setPitch(1.1f);
+            tts.setSpeechRate(rate);
+            tts.setPitch(pitch);
             ready = use("en");
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override
@@ -122,7 +173,12 @@ final class Speaker implements TextToSpeech.OnInitListener {
         boolean good;
         if (lang.equals("en")) good = ok(tts.setLanguage(english(accent))) || ok(tts.setLanguage(Locale.ENGLISH));
         else good = ok(tts.setLanguage(new Locale(lang, "IN")));
-        if (good) current = lang;
+        if (good) {
+            current = lang;
+            applyVoice(lang);
+            tts.setSpeechRate(rate);
+            tts.setPitch(pitch);
+        }
         return good;
     }
 
@@ -137,8 +193,12 @@ final class Speaker implements TextToSpeech.OnInitListener {
 
     /** Speaks and returns the id that read-along callbacks will carry, or null if nothing was spoken. */
     String sayTracked(String s) {
+        return sayTracked(s, "en");
+    }
+
+    String sayTracked(String s, String lang) {
         String id = "t" + (seq++);
-        return speak(s, "en", id) && on && ready ? id : null;
+        return speak(s, lang, id) && on && ready ? id : null;
     }
 
     private boolean speak(String s, String lang, String id) {

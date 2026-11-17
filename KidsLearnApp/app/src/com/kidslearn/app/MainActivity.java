@@ -66,6 +66,9 @@ public class MainActivity extends Activity {
         stats = new Stats(this);
         stats.prune(today());
         speaker = new Speaker(this, prefs.getBoolean("sound", true), prefs.getString("accent", "GB"));
+        speaker.setRate(prefs.getFloat("rate", 0.85f));
+        speaker.setPitch(prefs.getFloat("pitch", 1.1f));
+        for (String l : new String[]{"en", "kn", "hi"}) speaker.setVoice(l, prefs.getString("voice_" + l, null));
         root = new FrameLayout(this);
         setContentView(root);
         home();
@@ -104,7 +107,21 @@ public class MainActivity extends Activity {
             showTimeUp();
             return;
         }
+        if (!prefs.contains("grade")) {
+            show(Grade.picker(this), true, Grade.COLOR, NONE);
+            return;
+        }
         show(HomeScreen.build(this), true, HomeScreen.COLOR, LEARN);
+    }
+
+    /** 0 = pre-school / UKG, 1–5 = Class 1–5. */
+    int grade() {
+        return prefs.getInt("grade", 1);
+    }
+
+    /** Read every button aloud before opening it (for children who can't read yet). */
+    boolean voiceGuide() {
+        return prefs.getBoolean("voiceGuide", grade() <= 1);
     }
 
     // ---- time log and daily limit ----

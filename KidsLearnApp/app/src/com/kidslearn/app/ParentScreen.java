@@ -373,6 +373,90 @@ final class ParentScreen {
         c.addView(online);
         line(a, c, "Questions come from opentdb.com (in English, easy level) and are not checked by this app. Without internet the built-in questions are used.", 0xFF78909C);
 
+        // class and reading help
+        c = card(a, list, "🎓 Class & reading help");
+        line(a, c, "Class: " + Grade.NAMES[a.grade()] + ". Harder lessons appear as the class goes up.", Ui.INK);
+        c.addView(smallButton(a, "Change class", () -> a.show(Grade.picker(a), false, Grade.COLOR, MainActivity.NONE)));
+        CheckBox guide = new CheckBox(a);
+        guide.setText("Voice guide: read every button aloud before opening it (for children who can't read yet)");
+        guide.setTextSize(16);
+        guide.setChecked(a.voiceGuide());
+        guide.setOnCheckedChangeListener((b, on) -> a.prefs.edit().putBoolean("voiceGuide", on).putBoolean("voiceGuideSet", true).apply());
+        c.addView(guide);
+
+        // voice: type, speed, pitch, installed voices
+        c = card(a, list, "🔈 Voice, speed and pitch");
+        line(a, c, "Android doesn't say which installed voices are male or female, so these buttons change the pitch and pick a matching voice when the phone names one.", 0xFF78909C);
+        LinearLayout vr = new LinearLayout(a);
+        vr.setPadding(0, Ui.dp(a, 8), 0, 0);
+        vr.addView(smallButton(a, "👩 Female", () -> voiceType(a, true)), Ui.lp(a, 0, Ui.WRAP, 1, 3));
+        vr.addView(smallButton(a, "👨 Male", () -> voiceType(a, false)), Ui.lp(a, 0, Ui.WRAP, 1, 3));
+        vr.addView(smallButton(a, "🔊 Test", () -> a.speaker.say("Hello! I am your reading friend. Cat, ship, boat.")), Ui.lp(a, 0, Ui.WRAP, 1, 3));
+        c.addView(vr);
+        final TextView rateLabel = line(a, c, "", Ui.INK);
+        android.widget.SeekBar rate = new android.widget.SeekBar(a);
+        rate.setMax(100);
+        rate.setProgress(Math.round((a.prefs.getFloat("rate", 0.85f) - 0.5f) * 100));
+        rateLabel.setText("Speed: " + String.format(Locale.ROOT, "%.2f", a.prefs.getFloat("rate", 0.85f)) + "×");
+        rate.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar s, int v, boolean user) {
+                float r = 0.5f + v / 100f;
+                rateLabel.setText("Speed: " + String.format(Locale.ROOT, "%.2f", r) + "×");
+                if (user) {
+                    a.prefs.edit().putFloat("rate", r).apply();
+                    a.speaker.setRate(r);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(android.widget.SeekBar s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(android.widget.SeekBar s) {
+                a.speaker.say("This is my speed.");
+            }
+        });
+        c.addView(rate);
+        final TextView pitchLabel = line(a, c, "", Ui.INK);
+        android.widget.SeekBar pitch = new android.widget.SeekBar(a);
+        pitch.setMax(110);
+        pitch.setProgress(Math.round((a.prefs.getFloat("pitch", 1.1f) - 0.5f) * 100));
+        pitchLabel.setText("Pitch: " + String.format(Locale.ROOT, "%.2f", a.prefs.getFloat("pitch", 1.1f)));
+        pitch.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar s, int v, boolean user) {
+                float pt = 0.5f + v / 100f;
+                pitchLabel.setText("Pitch: " + String.format(Locale.ROOT, "%.2f", pt));
+                if (user) {
+                    a.prefs.edit().putFloat("pitch", pt).apply();
+                    a.speaker.setPitch(pt);
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(android.widget.SeekBar s) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(android.widget.SeekBar s) {
+                a.speaker.say("This is my voice.");
+            }
+        });
+        c.addView(pitch);
+        LinearLayout pick = new LinearLayout(a);
+        pick.setPadding(0, Ui.dp(a, 8), 0, 0);
+        final String[][] langs = {{"en", "English"}, {"kn", "Kannada"}, {"hi", "Hindi"}};
+        for (final String[] l : langs)
+            pick.addView(smallButton(a, l[1] + " voice", () -> chooseVoice(a, l[0], l[1])), Ui.lp(a, 0, Ui.WRAP, 1, 3));
+        c.addView(pick);
+
+        // word bank import
+        c = card(a, list, "📖 Word bank");
+        line(a, c, WordsData.bank(a).size() + " words. Add more from a CSV file with one word per line: English,Kannada,Hindi,picture,category (picture and category are optional).", 0xFF78909C);
+        c.addView(smallButton(a, "Import word list (CSV)", () -> importWords(a)));
+
         // accent
         c = card(a, list, "🗣️ English voice");
         line(a, c, "Use one accent everywhere so your child hears the same sounds every time.", 0xFF78909C);
@@ -425,6 +509,90 @@ final class ParentScreen {
         sv.addView(list);
         page.addView(sv, Ui.lp(Ui.MATCH, 0, 1));
         return page;
+    }
+
+    /** Female: higher pitch; male: lower pitch. Also picks a voice whose name says so, if the phone has one. */
+    private static void voiceType(MainActivity a, boolean female) {
+        float pt = female ? 1.25f : 0.8f;
+        a.prefs.edit().putFloat("pitch", pt).apply();
+        a.speaker.setPitch(pt);
+        int found = 0;
+        for (String lang : new String[]{"en", "kn", "hi"}) {
+            for (String name : a.speaker.voices(lang)) {
+                String n = name.toLowerCase(Locale.ROOT);
+                boolean isFemale = n.contains("female"), isMale = n.contains("male") && !isFemale;
+                if (female ? isFemale : isMale) {
+                    a.prefs.edit().putString("voice_" + lang, name).apply();
+                    a.speaker.setVoice(lang, name);
+                    found++;
+                    break;
+                }
+            }
+        }
+        a.speaker.say(female ? "Hello! This is the female voice." : "Hello! This is the male voice.");
+        Toast.makeText(a, found > 0 ? "Voice and pitch changed" : "Pitch changed. Use the voice buttons below to try the other installed voices.", Toast.LENGTH_LONG).show();
+        refresh(a);
+    }
+
+    private static void chooseVoice(final MainActivity a, final String lang, String name) {
+        final java.util.List<String> voices = a.speaker.voices(lang);
+        if (voices.isEmpty()) {
+            Toast.makeText(a, "No " + name + " voices are installed. See Settings › Text-to-speech on the phone.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        final String[] items = new String[voices.size() + 1];
+        items[0] = "Phone default";
+        for (int i = 0; i < voices.size(); i++) items[i + 1] = "Voice " + (i + 1) + "  (" + voices.get(i) + ")";
+        new AlertDialog.Builder(a).setTitle(name + " voice").setItems(items, (d, w) -> {
+            String v = w == 0 ? null : voices.get(w - 1);
+            if (v == null) a.prefs.edit().remove("voice_" + lang).apply();
+            else a.prefs.edit().putString("voice_" + lang, v).apply();
+            a.speaker.setVoice(lang, v);
+            a.speaker.say(lang.equals("kn") ? "ನಮಸ್ಕಾರ" : lang.equals("hi") ? "नमस्ते" : "Hello! This is my voice.", lang);
+        }).show();
+    }
+
+    private static void importWords(final MainActivity a) {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("*/*");
+        i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"text/csv", "text/comma-separated-values", "text/plain", "application/octet-stream"});
+        a.forResult(i, "No file app found on this phone", (code, data) -> {
+            if (code != Activity.RESULT_OK || data == null || data.getData() == null) return;
+            StringBuilder keep = new StringBuilder();
+            int good = 0, bad = 0;
+            try (InputStream in = a.getContentResolver().openInputStream(data.getData())) {
+                if (in == null) throw new IllegalStateException("no stream");
+                java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(in, StandardCharsets.UTF_8));
+                String lineText;
+                int lines = 0;
+                while ((lineText = r.readLine()) != null && lines++ < 20000) {
+                    if (lineText.trim().isEmpty()) continue;
+                    if (WordsData.parse(lineText) != null) {
+                        keep.append(lineText.replace("﻿", "")).append('\n');
+                        good++;
+                    } else bad++;
+                }
+            } catch (Exception e) {
+                Toast.makeText(a, "The file could not be read", Toast.LENGTH_LONG).show();
+                return;
+            }
+            if (good == 0) {
+                Toast.makeText(a, "No words found. Each line needs: English,Kannada,Hindi", Toast.LENGTH_LONG).show();
+                return;
+            }
+            try (OutputStream os = new java.io.FileOutputStream(new java.io.File(a.getFilesDir(), "words.csv"), true)) {
+                os.write(keep.toString().getBytes(StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                Toast.makeText(a, "The words could not be saved", Toast.LENGTH_LONG).show();
+                return;
+            }
+            int before = WordsData.bank(a).size();
+            WordsData.reset();
+            int added = WordsData.bank(a).size() - before;
+            Toast.makeText(a, "Added " + added + " new words" + (bad > 1 ? " (" + (bad - 1) + " lines skipped)" : ""), Toast.LENGTH_LONG).show();
+            refresh(a);
+        });
     }
 
     private static int step(int current, int dir) {

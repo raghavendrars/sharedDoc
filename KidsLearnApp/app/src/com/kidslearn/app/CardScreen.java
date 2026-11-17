@@ -19,14 +19,19 @@ final class CardScreen {
     private LinearLayout card;
     private TextView counter, mic;
 
-    private CardScreen(MainActivity a, int cat) {
+    private CardScreen(MainActivity a, int cat, List<Item> items) {
         this.a = a;
         this.cat = cat;
-        this.items = Data.items(cat);
+        this.items = items;
     }
 
     static View build(MainActivity a, int cat, String title, int color) {
-        return new CardScreen(a, cat).make(title, color);
+        return new CardScreen(a, cat, Data.items(cat)).make(title, color);
+    }
+
+    /** Cards from any list of items (Kannada and Hindi extras). */
+    static Runnable open(final MainActivity a, final List<Item> items, final String title, final int color) {
+        return () -> a.show(new CardScreen(a, -1, items).make(title, color), false, color, MainActivity.AUDIO);
     }
 
     private View make(String title, int color) {

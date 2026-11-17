@@ -43,6 +43,17 @@ final class Stats {
         return t;
     }
 
+    /** Days in a row with at least one minute of learning (today counts once it has a minute). */
+    int streak(int today) {
+        int d = today, n = 0;
+        if (total(d) < 60000) d--;
+        while (total(d) >= 60000) {
+            n++;
+            d--;
+        }
+        return n;
+    }
+
     int bonus(int day) {
         return sp.getInt("b" + day, 0);
     }

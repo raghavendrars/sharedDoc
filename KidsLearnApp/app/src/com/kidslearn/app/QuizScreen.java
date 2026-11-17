@@ -27,16 +27,19 @@ import java.util.Random;
 /** Quiz Time: ten pick-one-of-four questions. A star for every question answered right the first time. */
 final class QuizScreen {
     static final int MATHS = 0, ENGLISH = 1, EVS = 2, GK = 3, ANIMALS = 4, PLANTS = 5, PHONICS = 6, KANNADA = 7, HINDI = 8,
-            PATTERNS = 9, VOWELS = 10, PICWORD = 11, ODD = 12, SIGHT = 13;
+            PATTERNS = 9, VOWELS = 10, PICWORD = 11, ODD = 12, SIGHT = 13, KN_GUNI = 14, HI_GUNI = 15, KN_VOCAB = 16, HI_VOCAB = 17,
+            ADD = 18, SUB = 19, MUL = 20, DIV = 21, TENSE_EN = 22, TENSE_KN = 23, TENSE_HI = 24, TABLE = 25;
     /** How many of the modes above are listed under Quiz Time; the rest belong to the Activity book and Sight words. */
     static final int QUIZ_TIME = 9;
     static final String[] TITLES = {"Maths", "English", "EVS", "General Knowledge", "Animals", "Plants", "Phonics", "Kannada", "Hindi",
-            "Patterns & counting", "Missing vowel", "Picture & word", "Odd one out", "Sight words"};
-    static final String[] ICONS = {"➕", "🔤", "🌍", "💡", "🐾", "🌱", "🗣️", "ಅ", "अ", "🧱", "🅰️", "🖼️", "🧐", "👀"};
+            "Patterns & counting", "Missing vowel", "Picture & word", "Odd one out", "Sight words", "Kannada gunitakshara", "Hindi barakhadi", "Kannada words", "Hindi words",
+            "Addition", "Subtraction", "Multiplication", "Division", "English tenses", "Kannada tenses", "Hindi tenses", "Times table"};
+    static final String[] ICONS = {"➕", "🔤", "🌍", "💡", "🐾", "🌱", "🗣️", "ಅ", "अ", "🧱", "🅰️", "🖼️", "🧐", "👀", "ಕಿ", "कि", "ಪದ", "शब्द", "➕", "➖", "✖️", "➗", "🕰️", "🕰️", "🕰️", "🔢"};
     static final int[] COLORS = {0xFF00ACC1, 0xFF6A1B9A, 0xFF2E7D32, 0xFF1565C0, 0xFF6D4C41, 0xFF388E3C, 0xFF3949AB, 0xFFD81B60, 0xFFEF6C00,
-            0xFF00897B, 0xFFAD1457, 0xFF7B1FA2, 0xFF455A64, 0xFFF4511E};
+            0xFF00897B, 0xFFAD1457, 0xFF7B1FA2, 0xFF455A64, 0xFFF4511E, 0xFFD81B60, 0xFFEF6C00, 0xFFD81B60, 0xFFEF6C00,
+            0xFF00ACC1, 0xFF0097A7, 0xFF00838F, 0xFF006064, 0xFF6A1B9A, 0xFFD81B60, 0xFFEF6C00, 0xFF0097A7};
     /** Open Trivia DB category used when a parent allows online questions (0 = offline only). */
-    private static final int[] ONLINE = {0, 0, 17, 9, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    private static final int[] ONLINE = {0, 0, 17, 9, 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     static final int QUIZ_COLOR = 0xFF5C6BC0;
     private static final int ROUND = 10;
     static final String[] PRAISE = {"Well done!", "Great job!", "Super!", "Yes! That is right!", "Awesome!"};
@@ -54,7 +57,7 @@ final class QuizScreen {
     private final MainActivity a;
     private final int mode, color;
     private final Random rnd;
-    private int n, won;
+    private int n, won, combo, param;
     private boolean firstTry, locked, online;
     private Q q;
     private List<String[]> order;
@@ -69,6 +72,14 @@ final class QuizScreen {
         this.rnd = a.rnd;
     }
 
+    static Runnable open(final MainActivity a, final int mode, final int param) {
+        return () -> {
+            QuizScreen q = new QuizScreen(a, mode);
+            q.param = param;
+            a.show(q.make(), false, COLORS[mode], MainActivity.QUIZ);
+        };
+    }
+
     static Runnable open(final MainActivity a, final int mode) {
         return () -> a.show(new QuizScreen(a, mode).make(), false, COLORS[mode], MainActivity.QUIZ);
     }
@@ -77,7 +88,7 @@ final class QuizScreen {
         LinearLayout page = new LinearLayout(a);
         page.setOrientation(LinearLayout.VERTICAL);
         page.setBackgroundColor(color);
-        page.addView(Ui.topBar(a, TITLES[mode] + " quiz"));
+        page.addView(Ui.topBar(a, mode == TABLE ? "Table of " + param : TITLES[mode] + " quiz"));
 
         prog = Ui.text(a, "", 15, Color.WHITE, true);
         page.addView(prog);
@@ -162,7 +173,7 @@ final class QuizScreen {
 
     private void ask() {
         if (n >= ROUND) {
-            result(a, TITLES[mode], won, ROUND, color, open(a, mode));
+            result(a, mode == TABLE ? "Table of " + param : TITLES[mode], won, ROUND, color, open(a, mode, param));
             return;
         }
         switch (mode) {
@@ -201,6 +212,28 @@ final class QuizScreen {
                 break;
             case ODD:
                 q = odd();
+                break;
+            case KN_GUNI:
+            case HI_GUNI:
+                q = guni(mode == KN_GUNI ? "kn" : "hi");
+                break;
+            case ADD:
+            case SUB:
+            case MUL:
+            case DIV:
+                q = arith(mode - ADD);
+                break;
+            case TABLE:
+                q = table();
+                break;
+            case TENSE_EN:
+            case TENSE_KN:
+            case TENSE_HI:
+                q = tense(mode == TENSE_KN ? "kn" : mode == TENSE_HI ? "hi" : "en");
+                break;
+            case KN_VOCAB:
+            case HI_VOCAB:
+                q = vocabQ(mode == KN_VOCAB ? "kn" : "hi");
                 break;
             case SIGHT:
                 q = sight();
@@ -260,13 +293,16 @@ final class QuizScreen {
             a.speaker.say(PRAISE[rnd.nextInt(PRAISE.length)] + (q.why != null ? " " + q.why : ""));
             if (firstTry) {
                 won++;
-                a.addStars(1);
-            }
+                combo++;
+                a.addStars(combo > 0 && combo % 5 == 0 ? 2 : 1);
+                if (combo >= 2) prog.setText("🔥 " + combo + " in a row!" + (combo % 5 == 0 ? "  Bonus ⭐" : ""));
+            } else combo = 0;
             a.confetti();
             n++;
             a.later(1400, this::ask);
         } else {
             firstTry = false;
+            combo = 0;
             t.setBackground(Ui.tile(a, 0xFFEF9A9A, 22));
             t.setOnClickListener(null);
             t.setClickable(false);
@@ -353,9 +389,113 @@ final class QuizScreen {
         return q;
     }
 
-    private Q maths() {
+    // ---- maths sized to the child's class ----
+
+    /** op: 0 add, 1 subtract, 2 multiply, 3 divide. */
+    private Q arith(int op) {
         Q q = new Q();
-        int type = rnd.nextInt(7), ans;
+        int g = a.grade(), x, y, ans;
+        int max = g <= 0 ? 10 : g == 1 ? 20 : g == 2 ? 100 : g == 3 ? 1000 : 10000;
+        if (op == 0) {
+            x = 1 + rnd.nextInt(max - 1);
+            y = 1 + rnd.nextInt(Math.max(1, max - x));
+            ans = x + y;
+            q.prompt = x + " + " + y + " = ?";
+            q.say = x + " plus " + y;
+            if (g <= 0 && ans <= 10) q.visual = Data.repeat("🍎", x, 0) + "  +  " + Data.repeat("🍎", y, 0) + "        ";
+        } else if (op == 1) {
+            x = 2 + rnd.nextInt(max - 1);
+            y = 1 + rnd.nextInt(x - 1);
+            ans = x - y;
+            q.prompt = x + " − " + y + " = ?";
+            q.say = x + " minus " + y;
+        } else if (op == 2) {
+            if (g <= 2) {
+                x = 2 + rnd.nextInt(4);
+                y = 1 + rnd.nextInt(10);
+            } else if (g == 3) {
+                x = 2 + rnd.nextInt(9);
+                y = 1 + rnd.nextInt(10);
+            } else if (g == 4) {
+                x = 11 + rnd.nextInt(89);
+                y = 2 + rnd.nextInt(8);
+            } else {
+                x = 11 + rnd.nextInt(89);
+                y = 11 + rnd.nextInt(20);
+            }
+            ans = x * y;
+            q.prompt = x + " × " + y + " = ?";
+            q.say = x + " times " + y;
+        } else {
+            if (g <= 3) {
+                y = 2 + rnd.nextInt(9);
+                ans = 1 + rnd.nextInt(10);
+            } else if (g == 4) {
+                y = 2 + rnd.nextInt(8);
+                ans = 10 + rnd.nextInt(90);
+            } else {
+                y = 2 + rnd.nextInt(11);
+                ans = 10 + rnd.nextInt(190);
+            }
+            x = y * ans;
+            q.prompt = x + " ÷ " + y + " = ?";
+            q.say = x + " divided by " + y;
+        }
+        near(q, ans);
+        return q;
+    }
+
+    private Q table() {
+        Q q = new Q();
+        int k = 1 + rnd.nextInt(10);
+        q.prompt = param + " × " + k + " = ?";
+        q.say = param + " times " + k;
+        near(q, param * k);
+        return q;
+    }
+
+    /** The right answer and three different wrong ones close to it. */
+    private void near(Q q, int ans) {
+        List<String> vals = new ArrayList<>();
+        vals.add(String.valueOf(ans));
+        int spread = Math.max(5, Math.abs(ans) / 10);
+        int tries = 0;
+        while (vals.size() < 4 && tries++ < 200) {
+            int d = 1 + rnd.nextInt(spread);
+            int v = rnd.nextBoolean() ? ans + d : ans - d;
+            if (v < 0) continue;
+            if (!vals.contains(String.valueOf(v))) vals.add(String.valueOf(v));
+        }
+        while (vals.size() < 4) vals.add(String.valueOf(ans + 10 * vals.size()));
+        fill(q, vals, String.valueOf(ans));
+    }
+
+    /** Pick the sentence in the right tense: three forms of one verb plus one other verb. */
+    private Q tense(String lang) {
+        Q q = new Q();
+        q.lang = lang;
+        String[][] all = WordsData.TENSES;
+        int v = rnd.nextInt(all.length), other;
+        do other = rnd.nextInt(all.length);
+        while (other == v);
+        int t = rnd.nextInt(3);
+        List<String> vals = new ArrayList<>();
+        for (int i = 0; i < 3; i++) vals.add(WordsData.tense(all[v], lang, i));
+        vals.add(WordsData.tense(all[other], lang, t));
+        String right = WordsData.tense(all[v], lang, t);
+        q.prompt = WordsData.when(lang, t) + " — " + all[v][0] + " " + WordsData.verbName(all[v], lang) + (lang.equals("en") ? "" : " (" + all[v][1] + ")");
+        q.say = lang.equals("en") ? WordsData.when(lang, t) + ". Which sentence is right for " + all[v][1] + "?" : WordsData.when(lang, t);
+        fill(q, vals, right);
+        q.why = WordsData.TENSE_NAMES[t] + " tense.";
+        return q;
+    }
+
+    private Q maths() {
+        int g = a.grade();
+        int pickOp = rnd.nextInt(g <= 1 ? 2 : g == 2 ? 3 : 4);
+        if (g <= 1 || rnd.nextInt(3) > 0) return arith(pickOp);
+        Q q = new Q();
+        int type = 4 + rnd.nextInt(3), ans;
         if (type == 0) {
             int x = 1 + rnd.nextInt(9), y = 1 + rnd.nextInt(10);
             ans = x + y;
@@ -596,6 +736,46 @@ final class QuizScreen {
         // the sentence with the word blanked out, so it also works by reading alone
         q.visual = w[ix[0]][1].replaceFirst("(?i)\\b" + w[ix[0]][0] + "\\b", "___");
         fill(q, vals, w[ix[0]][0]);
+        return q;
+    }
+
+    // ---- Kannada & Hindi ----
+
+    /** Gunitakshara / barakhadi: find the syllable that is spoken (and written in English letters). */
+    private Q guni(String lang) {
+        Q q = new Q();
+        q.lang = lang;
+        String[][] cons = IndicData.consonants(lang);
+        String[][] row = IndicData.row(lang, rnd.nextInt(Math.min(cons.length, 33)));
+        int[] ix = fourDistinct(row, 1);
+        List<String> vals = new ArrayList<>();
+        for (int i : ix) vals.add(row[i][0]);
+        q.prompt = "🔊 Find “" + row[ix[0]][1] + "”";
+        q.say = row[ix[0]][0];
+        fill(q, vals, row[ix[0]][0]);
+        return q;
+    }
+
+    /** Vocabulary: picture → word, or meaning → word. */
+    private Q vocabQ(String lang) {
+        Q q = new Q();
+        List<String[]> all = new ArrayList<>();
+        for (String[][] theme : IndicData.vocab(lang)) all.addAll(Arrays.asList(theme));
+        String[][] arr = all.toArray(new String[0][]);
+        int[] ix = fourDistinct(arr, 0);
+        List<String> vals = new ArrayList<>();
+        for (int i : ix) vals.add(arr[i][0]);
+        String[] r = arr[ix[0]];
+        if (rnd.nextBoolean()) {
+            q.prompt = "Which word is this?";
+            q.visual = r[3];
+            q.say = null;
+        } else {
+            q.prompt = "Which word means “" + r[2] + "”?";
+            q.say = "Which word means " + r[2] + "?";
+        }
+        fill(q, vals, r[0]);
+        q.why = r[0].isEmpty() ? null : "It is " + r[1] + ".";
         return q;
     }
 }
