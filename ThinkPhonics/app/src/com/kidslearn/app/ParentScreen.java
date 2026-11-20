@@ -96,6 +96,10 @@ final class ParentScreen {
     }
 
     static void askPin(final MainActivity a, String title, final Runnable ok) {
+        if (!a.prefs.contains("pinHash")) {
+            createPin(a, ok); // no PIN yet: the parent makes one now
+            return;
+        }
         final EditText e = pinField(a, "PIN");
         new AlertDialog.Builder(a).setTitle(title).setMessage("Enter the parent PIN").setView(padded(a, e))
                 .setPositiveButton("OK", (d, w) -> {
@@ -384,6 +388,28 @@ final class ParentScreen {
         guide.setOnCheckedChangeListener((b, on) -> a.prefs.edit().putBoolean("voiceGuide", on).putBoolean("voiceGuideSet", true).apply());
         c.addView(guide);
 
+        line(a, c, "Phonics steps: Step " + (PhonicsCourse.unlocked(a) + 1) + " of " + PhonicsCourse.STEPS.length + " open", Ui.INK);
+
+        // game time for Blockhaven Mini and Turbo Circuit Mini (one shared budget)
+        c = card(a, list, "🎮 Games — game time");
+        line(a, c, "Today: played " + Stats.mins(a.stats.get(day, MainActivity.GAME)) + " of " + GameTime.minutesToday(a) + " min"
+                + (GameTime.weekend() ? " (weekend)" : " (weekday)"), Ui.INK);
+        CheckBox gameOn = new CheckBox(a);
+        gameOn.setText("Allow the games (Blockhaven Mini, Turbo Circuit Mini)");
+        gameOn.setTextSize(16);
+        gameOn.setChecked(a.prefs.getBoolean("game_on", true));
+        gameOn.setOnCheckedChangeListener((b, on) -> a.prefs.edit().putBoolean("game_on", on).apply());
+        c.addView(gameOn);
+        int[] mins = {0, 10, 15, 20, 30, 45, 60, 90, 120};
+        stepper(a, c, "Weekday game time", "game_wd", 30, mins, x -> x == 0 ? "none" : x + " min");
+        stepper(a, c, "Weekend game time", "game_we", 60, mins, x -> x == 0 ? "none" : x + " min");
+        int[] hours = new int[25];
+        for (int i = 0; i <= 24; i++) hours[i] = i;
+        stepper(a, c, "Open from", "game_from", 7, hours, GameTime::hourName);
+        stepper(a, c, "Open until", "game_to", 20, hours, GameTime::hourName);
+        stepper(a, c, "Learn first", "game_learn_first", 10, new int[]{0, 5, 10, 15, 20, 30}, x -> x == 0 ? "not needed" : x + " min");
+        line(a, c, "Game time also counts towards the daily limit above. When game time ends the game saves and locks; you can give extra minutes with the PIN.", 0xFF78909C);
+
         // voice: type, speed, pitch, installed voices
         c = card(a, list, "🔈 Voice, speed and pitch");
         line(a, c, "Android doesn't say which installed voices are male or female, so these buttons change the pitch and pick a matching voice when the phone names one.", 0xFF78909C);
@@ -509,6 +535,36 @@ final class ParentScreen {
         sv.addView(list);
         page.addView(sv, Ui.lp(Ui.MATCH, 0, 1));
         return page;
+    }
+
+    interface Fmt {
+        String f(int v);
+    }
+
+    /** A "label  [−] value [+]" row that steps a saved number through the given values. */
+    private static void stepper(final MainActivity a, LinearLayout c, String label, final String key, final int def, final int[] values, final Fmt fmt) {
+        LinearLayout row = new LinearLayout(a);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, Ui.dp(a, 6), 0, 0);
+        TextView name = Ui.text(a, label, 15, Ui.INK, false);
+        name.setGravity(Gravity.START);
+        row.addView(name, Ui.lp(0, Ui.WRAP, 1.3f));
+        final TextView val = Ui.text(a, fmt.f(a.prefs.getInt(key, def)), 16, Ui.INK, true);
+        final Runnable[] move = new Runnable[2];
+        for (int d = 0; d < 2; d++) {
+            final int dir = d == 0 ? -1 : 1;
+            move[d] = () -> {
+                int cur = a.prefs.getInt(key, def), i = 0;
+                while (i < values.length - 1 && values[i] < cur) i++;
+                int next = values[Math.max(0, Math.min(values.length - 1, i + dir))];
+                a.prefs.edit().putInt(key, next).apply();
+                val.setText(fmt.f(next));
+            };
+        }
+        row.addView(smallButton(a, " − ", move[0]));
+        row.addView(val, Ui.lp(0, Ui.WRAP, 1f));
+        row.addView(smallButton(a, " + ", move[1]));
+        c.addView(row);
     }
 
     /** Female: higher pitch; male: lower pitch. Also picks a voice whose name says so, if the phone has one. */

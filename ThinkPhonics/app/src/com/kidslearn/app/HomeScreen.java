@@ -229,6 +229,7 @@ final class HomeScreen {
         list.setPadding(pad, 0, pad, pad);
 
         section(a, list, "📖 Learn to read", new Tile[]{
+                new Tile("🪜", "Phonics steps", PhonicsCourse.COLOR, PhonicsCourse.open(a)),
                 new Tile("🎬", "Phonics videos", 0xFFE53935, menu(a, "Phonics videos", LessonScreen.COLOR,
                         new String[]{"2-letter words  ·  at, up, go", "3-letter words  ·  cat, sun", "4-letter words  ·  frog, fish", "5-letter words  ·  plant, train"},
                         new Runnable[]{LessonScreen.open(a, 0), LessonScreen.open(a, 1), LessonScreen.open(a, 2), LessonScreen.open(a, 3)},
@@ -279,6 +280,8 @@ final class HomeScreen {
                         new int[]{0, 1, 0, 0}))});
 
         section(a, list, "🏠 Play & make", new Tile[]{
+                new Tile("🧱", "Blockhaven Mini", BlockGame.COLOR, BlockGame.open(a)),
+                new Tile("🏎️", "Turbo Circuit Mini", RaceGame.COLOR, RaceGame.open(a)),
                 new Tile("🔍", "Scavenger hunt", HuntScreen.COLOR, HuntScreen.shelf(a)),
                 new Tile("🧺", "Sensory bin", BinScreen.COLOR, menu(a, "Sensory bin", BinScreen.COLOR,
                         new String[]{"🔤  Hidden letters", "🔢  Hidden numbers", "🔺  Hidden shapes"},

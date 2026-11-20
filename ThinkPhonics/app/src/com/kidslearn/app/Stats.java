@@ -18,9 +18,9 @@ import java.util.TimeZone;
 
 /** Time spent per day and category, quiz scores, parent's YouTube links, and backup to / from JSON. */
 final class Stats {
-    static final String[] CATS = {MainActivity.VIDEO, MainActivity.AUDIO, MainActivity.QUIZ, MainActivity.LEARN};
-    static final String[] NAMES = {"Videos", "Audio", "Quiz", "Other learning"};
-    static final int[] COLORS = {0xFFE53935, 0xFF1E88E5, 0xFF43A047, 0xFFFB8C00};
+    static final String[] CATS = {MainActivity.VIDEO, MainActivity.AUDIO, MainActivity.QUIZ, MainActivity.LEARN, MainActivity.GAME};
+    static final String[] NAMES = {"Videos", "Audio", "Quiz", "Other learning", "Games"};
+    static final int[] COLORS = {0xFFE53935, 0xFF1E88E5, 0xFF43A047, 0xFFFB8C00, 0xFF8E24AA};
     final SharedPreferences sp;
 
     Stats(Context c) {
@@ -54,6 +54,14 @@ final class Stats {
         return n;
     }
 
+    int gameBonus(int day) {
+        return sp.getInt("g" + day, 0);
+    }
+
+    void addGameBonus(int day, int minutes) {
+        sp.edit().putInt("g" + day, gameBonus(day) + minutes).apply();
+    }
+
     int bonus(int day) {
         return sp.getInt("b" + day, 0);
     }
@@ -66,7 +74,7 @@ final class Stats {
     void prune(int today) {
         SharedPreferences.Editor ed = sp.edit();
         for (String k : sp.getAll().keySet()) {
-            if (!k.startsWith("t") && !k.startsWith("b")) continue;
+            if (!k.startsWith("t") && !k.startsWith("b") && !k.startsWith("g")) continue;
             int end = k.indexOf('_');
             try {
                 int day = Integer.parseInt(k.substring(1, end < 0 ? k.length() : end));

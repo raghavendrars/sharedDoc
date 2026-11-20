@@ -34,7 +34,7 @@ public class MainActivity extends Activity {
     }
 
     /** Time categories shown to parents. NONE is not counted (parents area, time-up screen). */
-    static final String VIDEO = "video", AUDIO = "audio", QUIZ = "quiz", LEARN = "learn", NONE = "none";
+    static final String VIDEO = "video", AUDIO = "audio", QUIZ = "quiz", LEARN = "learn", GAME = "game", NONE = "none";
 
     FrameLayout root;
     Speaker speaker;
@@ -138,6 +138,12 @@ public class MainActivity extends Activity {
 
     long allowedMs() {
         return (limitMinutes() + stats.bonus(today())) * 60000L;
+    }
+
+    /** Time used today in one category, including the screen that is open right now. */
+    long liveUsed(String category) {
+        long live = resumed && !timeUp && mark > 0 && category.equals(cat) ? SystemClock.elapsedRealtime() - mark : 0;
+        return stats.get(today(), category) + live;
     }
 
     long usedToday() {
