@@ -1,7 +1,7 @@
-# Builds dist\KidsLearnApp.apk.
-#   .\build.ps1                          -> app is called "KidsLearnApp" on the phone
+# Builds dist\ThinkPhonics.apk.
+#   .\build.ps1                          -> app is called "ThinkPhonics" on the phone
 #   .\build.ps1 -AppName "Chintu Learns"  -> any name you like under the icon
-param([string]$AppName = "KidsLearnApp")
+param([string]$AppName = "ThinkPhonics")
 
 $ErrorActionPreference = "Stop"
 $root  = $PSScriptRoot
@@ -61,11 +61,11 @@ if (-not (Test-Path $ks)) {
     [System.IO.File]::WriteAllText($pwFile, $pw)
     Run "Create signing key" {
         & "$jdk\bin\keytool.exe" -genkeypair -keystore $ks -alias kids -keyalg RSA -keysize 2048 -validity 10000 `
-            -storepass $pw -keypass $pw -dname "CN=KidsLearnApp"
+            -storepass $pw -keypass $pw -dname "CN=ThinkPhonics"
     }
 }
 $pw = [System.IO.File]::ReadAllText($pwFile).Trim()
-$apk = "$root\dist\KidsLearnApp.apk"
+$apk = "$root\dist\ThinkPhonics.apk"
 Run "Sign" { & "$bt\apksigner.bat" sign --ks $ks --ks-key-alias kids --ks-pass "pass:$pw" --key-pass "pass:$pw" --out $apk "$b\aligned.apk" }
 Run "Verify" { & "$bt\apksigner.bat" verify $apk }
 

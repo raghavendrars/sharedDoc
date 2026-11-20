@@ -607,7 +607,7 @@ final class ParentScreen {
         final String json;
         try {
             JSONObject o = new JSONObject();
-            o.put("app", "KidsLearnApp");
+            o.put("app", "ThinkPhonics");
             o.put("version", 1);
             o.put("created", new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT).format(new Date()));
             o.put("settings", Stats.dump(a.prefs));
@@ -620,7 +620,7 @@ final class ParentScreen {
         Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         i.addCategory(Intent.CATEGORY_OPENABLE);
         i.setType("application/json");
-        i.putExtra(Intent.EXTRA_TITLE, "KidsLearnApp-backup-" + new SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(new Date()) + ".json");
+        i.putExtra(Intent.EXTRA_TITLE, "ThinkPhonics-backup-" + new SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(new Date()) + ".json");
         a.forResult(i, "No file app found on this phone", (code, data) -> {
             if (code != Activity.RESULT_OK || data == null || data.getData() == null) return;
             try (OutputStream os = a.getContentResolver().openOutputStream(data.getData(), "wt")) {
@@ -651,10 +651,11 @@ final class ParentScreen {
                     if (out.size() > 4 * 1024 * 1024) throw new IllegalStateException("too big");
                 }
                 o = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8));
-                if (!"KidsLearnApp".equals(o.optString("app")) || o.optJSONObject("settings") == null || o.optJSONObject("progress") == null)
+                String appName = o.optString("app");
+                if (!("ThinkPhonics".equals(appName) || "KidsLearnApp".equals(appName)) || o.optJSONObject("settings") == null || o.optJSONObject("progress") == null)
                     throw new IllegalStateException("not ours");
             } catch (Exception e) {
-                Toast.makeText(a, "This is not a KidsLearnApp backup file", Toast.LENGTH_LONG).show();
+                Toast.makeText(a, "This is not a ThinkPhonics backup file", Toast.LENGTH_LONG).show();
                 return;
             }
             new AlertDialog.Builder(a).setTitle("Import backup?")

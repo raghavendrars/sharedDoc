@@ -187,7 +187,7 @@ final class HomeScreen {
         head.setBackgroundColor(COLOR);
         int p = Ui.dp(a, 14);
         head.setPadding(p, p, p, p);
-        TextView title = Ui.text(a, "KidsLearnApp", 24, Color.WHITE, true);
+        TextView title = Ui.text(a, "ThinkPhonics", 24, Color.WHITE, true);
         title.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         head.addView(title, Ui.lp(0, Ui.WRAP, 1));
         head.addView(Ui.starPill(a));
